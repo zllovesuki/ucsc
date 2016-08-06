@@ -1,0 +1,9 @@
+{
+    "apps": [
+        {
+            "name": "UCSC Course Data",
+            "script": "server.js",
+            "watch": true
+        }
+    ]
+}
