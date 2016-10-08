@@ -119,6 +119,9 @@ var secureRequest = function(url, data, jar) {
             obj.agentOptions.socksHost = process.env.SOCKS.split(':')[0];
             obj.agentOptions.socksPort = process.env.SOCKS.split(':')[1];
         }
+        if (process.env.BIND) {
+            obj.localAddress = process.env.BIND;
+        }
         request(obj, function(err, response, body) {
             if (err) {
                 return reject(err);
@@ -151,6 +154,9 @@ var plainRequest = function(url, data) {
             obj.agentClass = Agent;
             obj.agentOptions.socksHost = process.env.SOCKS.split(':')[0];
             obj.agentOptions.socksPort = process.env.SOCKS.split(':')[1];
+        }
+        if (process.env.BIND) {
+            obj.localAddress = process.env.BIND;
         }
         request(obj, function(err, response, body) {
             if (err) {
