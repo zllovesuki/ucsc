@@ -18,8 +18,10 @@ var request = require('request').defaults({
     timeout: 180 * 1000
 });
 var j = require('request').jar();
+var pkg = require('./package.json')
 
-var faker = require('faker');
+var contactInfo = (typeof process.env.CONTACT === 'undefined' ? 'User did not specify his/her contact information' : process.env.CONTACT)
+var ua = 'UCSC Course Data Fetcher/' + pkg.version + ' ' + contactInfo;
 
 if (process.env.SOCKS) {
     var sAgent = require('socks5-https-client/lib/Agent');
@@ -101,7 +103,7 @@ var secureRequest = function(url, data, jar) {
                 ciphers: "HIGH:!aNULL:!kRSA:!MD5:!RC4:!PSK:!SRP:!DSS:!DSA"
             },
             headers: {
-                'User-Agent': faker.internet.userAgent()
+                'User-Agent': ua
             }
         }
         if (data) {
@@ -140,7 +142,7 @@ var plainRequest = function(url, data) {
                 ciphers: "HIGH:!aNULL:!kRSA:!MD5:!RC4:!PSK:!SRP:!DSS:!DSA"
             },
             headers: {
-                'User-Agent': faker.internet.userAgent()
+                'User-Agent': ua
             }
         }
         if (data) {
@@ -1098,6 +1100,10 @@ var getGEDesc = function() {
     })
 }
 
+var testReq = function(testURL) {
+    return secureRequest(testURL)
+}
+
 module.exports = {
     getTerms: getTerms,
     getCourses: getCourses,
@@ -1109,5 +1115,6 @@ module.exports = {
     getRateMyProfessorScoresByLastName: getRateMyProfessorScoresByLastName,
     getRateMyProfessorRatingsByFullName: getRateMyProfessorRatingsByFullName,
     getRateMyProfessorRatingsByLastName: getRateMyProfessorRatingsByLastName,
-    getMaps: getMaps
+    getMaps: getMaps,
+    test: testReq
 }
