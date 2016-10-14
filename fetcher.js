@@ -139,7 +139,7 @@ var self = module.exports = {
                         self.courseInfoTimestamp[term.code] = Math.round(+new Date()/1000)
                         return self.write('./db/courses/' + term.code + '.json', self.coursesInfo[term.code])
                         .then(function() {
-                            delete coursesInfo[term.code];
+                            delete self.coursesInfo[term.code];
                             return self.write('./db/timestamp/courses/' + term.code + '.json', self.courseInfoTimestamp[term.code])
                         })
                     })
