@@ -1,0 +1,10 @@
+{
+    "apps": [
+        {
+            "name": "ucsc-rmp-mapping-worker",
+            "script": "rmpMappingWorker.js",
+            "watch": true,
+            "restart_delay": 5000
+        }
+    ]
+}
