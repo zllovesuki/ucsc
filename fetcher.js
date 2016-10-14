@@ -1,5 +1,6 @@
 var ucsc = require('./index');
 var Promise = require('bluebird');
+var stringSimilarity = require('string-similarity');
 var elasticlunr = require('elasticlunr');
 var fs = require('fs');
 
