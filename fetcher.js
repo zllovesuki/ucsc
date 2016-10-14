@@ -322,10 +322,10 @@ var self = module.exports = {
 
     rmp: {},
     mapping: {},
-    saveRateMyProfessorsMappings: function() {
-        return self.read('./db/terms.json').then(function(json) {
+    saveRateMyProfessorsMappings: function(s3ReadHandler) {
+        return s3ReadHandler('/terms.json').then(function(json) {
             return Promise.map(json, function(term) {
-                return self.read('./db/terms/' + term.code + '.json').then(function(courses) {
+                return s3ReadHandler('/terms/' + term.code + '.json').then(function(courses) {
                     return Promise.map(Object.keys(courses), function(subject) {
                         return Promise.map(courses[subject], function(course) {
                             if (!(course.ins.f && course.ins.l)) {
