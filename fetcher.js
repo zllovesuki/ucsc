@@ -1,5 +1,6 @@
 var ucsc = require('./index');
 var Promise = require('bluebird');
+var elasticlunr = require('elasticlunr');
 var fs = require('fs');
 
 var self = module.exports = {
@@ -141,6 +142,55 @@ var self = module.exports = {
                         .then(function() {
                             delete self.coursesInfo[term.code];
                             return self.write('./db/timestamp/courses/' + term.code + '.json', self.courseInfoTimestamp[term.code])
+                        })
+                    })
+                })
+            }, { concurrency: 1 })
+        })
+    },
+
+    /*
+        Index of course
+    */
+    index: {},
+    indexTimestamp: {},
+    buildIndex: function() {
+        return self.read('./db/terms.json').then(function(json) {
+            return Promise.map(json, function(term) {
+                return self.read('./db/terms/' + term.code + '.json').then(function(courses) {
+                    self.index[term.code] = elasticlunr();
+
+                    self.index[term.code].addField('c');
+                    self.index[term.code].addField('n');
+                    self.index[term.code].addField('f');
+                    self.index[term.code].addField('la');
+                    self.index[term.code].addField('d');
+                    self.index[term.code].setRef('b');
+                    self.index[term.code].saveDocument(false);
+
+                    return Promise.map(Object.keys(courses), function(subject) {
+                        return Promise.map(courses[subject], function(course) {
+                            if (course.num) {
+                                course.c = subject + ' ' + course.c.split(/(\d+)/).filter(Boolean).join(" ");
+                                //course.lo = course.loc;
+                                course.n = course.n.split(/(?=[A-Z])/).map(function(el) { return el.trim(); }).join(" ")
+                                course.f = course.ins.f;
+                                course.la = course.ins.l;
+                                course.d = course.ins.d[0];
+                                course.b = course.num;
+                                self.index[term.code].addDoc(course);
+                            }else{
+                                console.log('No course number found, skipping...')
+                            }
+                        }, { concurrency: 50 })
+                    }, { concurrency: 2 }).then(function() {
+                        self.indexTimestamp[term.code] = Math.round(+new Date()/1000)
+                        console.log('Saving term index', term.name)
+                        return self.write('./db/index/' + term.code + '.json', self.index[term.code].toJSON())
+                        .then(function() {
+                            return self.write('./db/timestamp/index/' + term.code + '.json', self.indexTimestamp[term.code]).then(function() {
+                                delete self.index[term.code];
+                            })
                         })
                     })
                 })

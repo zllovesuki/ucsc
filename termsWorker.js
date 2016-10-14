@@ -54,7 +54,29 @@ var uploadEverything = function() {
     }, { concurrency: 10 })
 }
 
+var uploadOneTerm = function(code) {
+    console.log('Uploading term', code)
+    var files = [
+        path.join(dbPath, 'offered', 'spring.json'),
+        path.join(dbPath, 'offered', 'summer.json'),
+        path.join(dbPath, 'offered', 'fall.json'),
+        path.join(dbPath, 'offered', 'winter.json'),
+        path.join(dbPath, 'courses', code + '.json'),
+        path.join(dbPath, 'timestamp', 'courses', code + '.json'),
+        path.join(dbPath, 'terms', code + '.json'),
+        path.join(dbPath, 'timestamp', 'terms', code + '.json'),
+        path.join(dbPath, 'index', code + '.json'),
+        path.join(dbPath, 'timestamp', 'index', code + '.json'),
+        path.join(dbPath, 'terms.json'),
+        path.join(dbPath, 'timestamp', 'terms.json')
+    ]
+    return Promise.mapSeries(files, function(file) {
+        return upload(file);
+    })
+}
+
 var shouldStartFresh = function() {
+    console.log('Check if S3 has data...')
     return new Promise(function(resolve, reject) {
         s3.getFile('/terms.json', function(err, res) {
             if (err) {
@@ -87,33 +109,41 @@ var getTermsJsonOnS3 = function() {
 }
 
 var checkForNewTerm = function() {
+    /*
+        TODO: locking
+    */
     console.log('Checking for new terms on pisa');
     return Promise.all([
         getTermsJsonOnS3(),
         job.ucsc.getTerms()
     ]).spread(function(s3Terms, pisaTerms) {
-        if (s3Terms[0].code >= pisaTerms[0].code) {
+        // Sort s3Terms desc by code
+        s3Terms.sort(function(a, b) { return b.code - a.code });
+        // Sort pisaTerms desc by code
+        pisaTerms.sort(function(a, b) { return b.code - a.code });
+        // Now you see me...
+        var localNewTerm = s3Terms[0].code;
+        var remoteNewTerm = pisaTerms[0].code;
+        var remoteNewTermName = pisaTerms[0].name;
+        if (localNewTerm >= remoteNewTerm) {
             console.log('No new terms found...')
             return;
         }
-        // TODO: if locked, return
-        // TODO: get a lock
         // now we should fetch the new term
-        console.log('Found a new term!', 'Fetching term', pisaTerms[0].name, '...');
-        return job.saveTermsList(pisaTerms[0].code)
+        console.log('Found a new term!', 'Fetching term', remoteNewTermName, '...');
+        return job.saveTermsList(remoteNewTerm)
         .then(function() {
-            return job.saveCourseInfo(pisaTerms[0].code)
+            return job.saveCourseInfo(remoteNewTerm)
         })
+        .then(job.buildIndex)
         .then(job.calculateTermsStats)
         .then(function() {
-            // TODO: Upload this term only
-            return;
+            return uploadOneTerm(remoteNewTerm)
         })
     }).catch(function(e) {
         console.error('Error thrown in checkForNewTerm', e)
         console.log('Continue...')
     }).finally(function() {
-        // TODO: release the lock
         setTimeout(function() {
             checkForNewTerm()
         }, 259200 * 1000) // check for new term every 3 days
@@ -124,16 +154,20 @@ shouldStartFresh().then(function(weShould) {
     if (weShould) {
         // initialize everything
         console.log('No data found on S3, fetching fresh data...')
-        // downloaded everything...
+        // download everything...
         // then uploading everything
         return job.saveTermsList()
         .then(job.saveCourseInfo)
+        .then(job.buildIndex)
+        .then(job.calculateTermsStats)
         .then(job.saveGEDesc)
         .then(job.saveMaps)
-        .then(job.calculateTermsStats)
         .then(uploadEverything)
+    }else{
+        console.log('Data already populated on S3.')
     }
 }).then(function() {
+    uploadOneTerm()
     checkForNewTerm();
 }).catch(function(e) {
     console.error('S3 Client returns Error', e)
