@@ -17,6 +17,7 @@ var request = require('request').defaults({
     },
     timeout: 180 * 1000
 });
+var faker = require('faker');
 var j = require('request').jar();
 var pkg = require('./package.json')
 
@@ -169,6 +170,35 @@ var plainRequest = function(url, data) {
     });
 }
 
+var anonRequest = function(url) {
+    return new Promise(function(resolve, reject) {
+        var obj = {
+            method: 'GET',
+            url: url,
+            agentOptions: {
+                ciphers: "HIGH:!aNULL:!kRSA:!MD5:!RC4:!PSK:!SRP:!DSS:!DSA"
+            },
+            headers: {
+                'User-Agent': faker.internet.userAgent()
+            }
+        }
+        if (process.env.SOCKS) {
+            obj.agentClass = Agent;
+            obj.agentOptions.socksHost = process.env.SOCKS.split(':')[0];
+            obj.agentOptions.socksPort = process.env.SOCKS.split(':')[1];
+        }
+        if (process.env.BIND) {
+            obj.localAddress = process.env.BIND;
+        }
+        request(obj, function(err, response, body) {
+            if (err) {
+                return reject(err);
+            }
+            return resolve(body);
+        })
+    });
+}
+
 var getURLFromObject = function(termId, obj) {
     // From Object to class_date in index.php
     /*
@@ -243,18 +273,18 @@ var getGEDescRawDom = function() {
 }
 
 var searchOnRateMyProfessorRawDom = function(firstName, lastName) {
-    return plainRequest('http://www.ratemyprofessors.com/search.jsp?query=' + encodeURIComponent([firstName, lastName, 'Santa', 'Cruz'].join(' ')));
+    return anonRequest('http://www.ratemyprofessors.com/search.jsp?query=' + encodeURIComponent([firstName, lastName, 'Santa', 'Cruz'].join(' ')));
 }
 
 var fetchRateMyProfessorRawDom = function(tid) {
-    return plainRequest('http://www.ratemyprofessors.com/ShowRatings.jsp?tid=' + tid)
+    return anonRequest('http://www.ratemyprofessors.com/ShowRatings.jsp?tid=' + tid)
 }
 
 var fetchRateMyProfessorJSONAll = function(tid) {
     var array = [];
     var fetch = function(tid, page) {
         page = page || 1;
-        return plainRequest('http://www.ratemyprofessors.com/paginate/professors/ratings?tid=' + tid + '&page=' + page)
+        return anonRequest('http://www.ratemyprofessors.com/paginate/professors/ratings?tid=' + tid + '&page=' + page)
         .then(function(body) {
             body = JSON.parse(body);
             array.push(body.ratings);
