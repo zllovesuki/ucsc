@@ -389,6 +389,7 @@ var getRateMyProfessorScoresByFullName = function(firstName, lastName) {
         return fetchRateMyProfessorRawDom(obj.tid).then(function(body) {
             return {
                 name: obj.name,
+                tid: obj.tid,
                 scores: parseRateMyProfessorFromSelector(body)
             }
         })
@@ -406,6 +407,7 @@ var getRateMyProfessorScoresByLastName = function(firstName, lastName) {
         return fetchRateMyProfessorRawDom(obj.tid).then(function(body) {
             return {
                 name: obj.name,
+                tid: obj.tid,
                 scores: parseRateMyProfessorFromSelector(body)
             }
         })
