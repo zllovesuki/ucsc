@@ -140,6 +140,10 @@ var checkForNewTerm = function() {
         .then(function() {
             return uploadOneTerm(remoteNewTerm)
         })
+        .then(function() {
+            console.log('We will exit with code 1 and let the deamon restart us (basically a garbage collection)...')
+            process.exit(1)
+        })
     }).catch(function(e) {
         console.error('Error thrown in checkForNewTerm', e)
         console.log('Continue...')
