@@ -2,26 +2,27 @@
 
 This repo contains:
 
-1. Historic courses data from 2004 till 2016
-    - this is done by scraping
-2. Static course data (section times, units, GE, capacity, etc)
-    - this is done by scraping
-3. Static terms data
-    - pisa.ucsc.edu/class_search/index.php <option>
-4. GE codes and descriptions
-    - http://registrar.ucsc.edu/navigator/section3/gened/beginning2010/gen-ed-codes/index.html
-5. RateMyProfessors simple scores for all instructors
-    - This is done by scraping
-6. RateMyProfessors ALL ratings for all instructors
-    - *because they love us* (http://www.ratemyprofessors.com/paginate/professors/ratings?tid=160090&page=1)
-7. Simple stats based on all ratings
-8. **Scripts to fetch all or single quarter/course data**
+1. Workers to fetch the newest terms automatically (incrementally) or freshly (initialization). This requires `pm2` installed
+2. Helper functions to help with fetching courses data, maps, GE, ratemyprofessors, statistics, etc. You can use this repo as a module directly in other projects
+
+You will need to have a S3 account somewhere:
+(`config.json`)
+```json
+{
+    "s3": {
+        "endpoint": "AWS or on-premise endpoints",
+        "key": "",
+        "secret": "",
+        "bucket": ""
+    }
+}
+```
 
 The build indicator signifies the validaity of the DOM parser. All data are fetched from [pisa.ucsc.edu](pisa.ucsc.edu), which outputs some data in a Base64 encoded string of PHP's serialized array, or DOM. The job of the script is to either A) parse the base64 data, or B) interpret the DOM directly with `cheerio`, or from UCSC websites, or from RateMyProfessors.com *If the build fails*, that means pisa.ucsc.edu's page structure is probably changed, or other sources. Please notify me or your can submit a pull request to fix it.
 
 ### Data Structure
 
-1. List of Terms (`db/terms.json`):
+List of Terms (`db/terms.json`):
 ```json
 [
   {
@@ -35,7 +36,8 @@ The build indicator signifies the validaity of the DOM parser. All data are fetc
   ...
 ]
 ```
-2. List of courses (`db/terms/2168.json`):
+
+List of courses (`db/terms/2168.json`):
 ```json
 {
 	"AMS": [
@@ -106,7 +108,8 @@ The build indicator signifies the validaity of the DOM parser. All data are fetc
 	]
 }
 ```
-3. Course Information (`db/courses/2168.json`):
+
+Course Information (`db/courses/2168.json`):
 ```json
 {
 	"20503": {
@@ -154,7 +157,7 @@ The build indicator signifies the validaity of the DOM parser. All data are fetc
 }
 ```
 
-4. GE codes and descriptions (`./db/ge.json`):
+GE codes and descriptions (`./db/ge.json`):
 ```json
 {
 	"CC": "Cross-Cultural Analysis",
@@ -176,7 +179,7 @@ The build indicator signifies the validaity of the DOM parser. All data are fetc
 }
 ```
 
-5. RMP simple scores (`./db/rmp/scores/110723.json`):
+RMP simple scores (`./db/rmp/scores/110723.json`):
 ```json
 {
 	"overall": "2.5",
@@ -205,7 +208,7 @@ The build indicator signifies the validaity of the DOM parser. All data are fetc
 }
 ```
 
-6. RMP all ratings (`db/rmp/ratings/942860.json`):
+RMP all ratings (`db/rmp/ratings/942860.json`):
 ```json
 [{
 	"attendance": "N/A",
@@ -241,7 +244,7 @@ The build indicator signifies the validaity of the DOM parser. All data are fetc
 }]
 ```
 
-7. RMP simple stats (`db/rmp/stats/160090.json`)
+RMP simple stats (`db/rmp/stats/160090.json`)
 ```json
 {
 	"clarity": 2.686905417814509,
