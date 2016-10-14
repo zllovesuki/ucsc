@@ -417,9 +417,9 @@ var self = module.exports = {
             }, { concurrency: 1 })
             .then(function() {
                 console.log('Saving mappings')
-                return self.write('./db/rmp.json', mapping)
+                return self.write('./db/rmp.json', self.mapping)
                 .then(function() {
-                    return self.write('./db/timestamp/rmp.json', JSON.stringify(Math.round(+new Date()/1000)));
+                    return self.write('./db/timestamp/rmp.json', Math.round(+new Date()/1000));
                 })
             })
         })
