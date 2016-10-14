@@ -108,6 +108,11 @@ var getTermsJsonOnS3 = function() {
     });
 }
 
+var dirtyGC = function() {
+    console.log('We will exit with code 1 and let the deamon restart us (basically a garbage collection)...')
+    process.exit(1)
+}
+
 var checkForNewTerm = function() {
     /*
         TODO: locking
@@ -140,10 +145,7 @@ var checkForNewTerm = function() {
         .then(function() {
             return uploadOneTerm(remoteNewTerm)
         })
-        .then(function() {
-            console.log('We will exit with code 1 and let the deamon restart us (basically a garbage collection)...')
-            process.exit(1)
-        })
+        .then(dirtyGC)
     }).catch(function(e) {
         console.error('Error thrown in checkForNewTerm', e)
         console.log('Continue...')
@@ -167,10 +169,7 @@ shouldStartFresh().then(function(weShould) {
         .then(job.saveGEDesc)
         .then(job.saveMaps)
         .then(uploadEverything)
-        .then(function() {
-            console.log('We will exit with code 1 and let the deamon restart us (basically a garbage collection)...')
-            process.exit(1)
-        })
+        .then(dirtyGC)
     }else{
         console.log('Data already populated on S3.')
     }
