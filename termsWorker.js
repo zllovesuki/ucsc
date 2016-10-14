@@ -163,11 +163,14 @@ shouldStartFresh().then(function(weShould) {
         .then(job.saveGEDesc)
         .then(job.saveMaps)
         .then(uploadEverything)
+        .then(function() {
+            console.log('We will exit with code 1 and let the deamon restart us (basically a garbage collection)...')
+            process.exit(1)
+        })
     }else{
         console.log('Data already populated on S3.')
     }
 }).then(function() {
-    uploadOneTerm()
     checkForNewTerm();
 }).catch(function(e) {
     console.error('S3 Client returns Error', e)

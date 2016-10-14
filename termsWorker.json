@@ -1,0 +1,10 @@
+{
+    "apps": [
+        {
+            "name": "ucsc-terms-worker",
+            "script": "termsWorker.js",
+            "watch": true,
+            "restart_delay": 5000
+        }
+    ]
+}
