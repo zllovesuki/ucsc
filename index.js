@@ -715,7 +715,10 @@ var parseCourseDOMFromSelector = function(body) {
                 // open?
                 sectionDom[i].children[13].children[1].data
             )*/
-            if (sectionDom[i].children[3].children[0].data.replace(/^\s+/, "").substring(0, 3) === 'TBA') {
+            if (sectionDom[i].children[3].children[0].data.replace(/^\s+/, "").indexOf('Cancel') !== -1) {
+                // Let's account for cancelled class
+                classDataCompatibleTime = false;
+            }else if (sectionDom[i].children[3].children[0].data.replace(/^\s+/, "").substring(0, 3) === 'TBA') {
                 classDataCompatibleTime = null;
             }else{
                 split = sectionDom[i].children[3].children[0].data.replace(/^\s+/, "").split(' ');
@@ -808,8 +811,10 @@ var parseDOMFromClassData = function(body) {
         }else{
             obj.n = classData.DESCR;
             obj.num = parseInt(classData.CLASS_NBR);
+            // Comparing the classData, it seems that CLASS_MTG_NBR = NULL means that this class is cancelled,
+            // though I have no idea what CLASS_MTG_NBR stands for
             obj.loct.push({
-                t: parseTime(classData),
+                t: (classData.CLASS_MTG_NBR === null ? false : parseTime(classData)),
                 loc: classData.FAC_DESCR
             })
             //obj.ty = classData.SSR_COMPONENT;
@@ -943,7 +948,10 @@ var parseDOMFromSelector = function(body) {
 
         parseLocation = body[i].children[5].children[2].data.replace(/^\s+/, "").split(':', 2);
 
-        if (body[i].children[7].children[2].data.replace(/^\s+/, "").substring(0, 3) === 'TBA') {
+        if (body[i].children[7].children[2].data.replace(/^\s+/, "").indexOf('Cancel') !== -1) {
+            // Let's account for cancelled class
+            classDataCompatibleTime = false;
+        }else if (body[i].children[7].children[2].data.replace(/^\s+/, "").substring(0, 3) === 'TBA') {
             classDataCompatibleTime = null;
         }else{
             split = body[i].children[7].children[2].data.replace(/^\s+/, "").split(' ');
