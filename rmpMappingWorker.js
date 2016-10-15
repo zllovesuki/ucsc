@@ -61,7 +61,7 @@ var walk = function(dir) {
 var uploadMappings = function() {
     console.log('Uploading RMP mappings')
     var files = [
-        path.join(dbPath, 'tmp.json'),
+        path.join(dbPath, 'rmp.json'),
         path.join(dbPath, 'timestamp', 'rmp.json')
     ]
     return Promise.mapSeries(files, function(file) {
