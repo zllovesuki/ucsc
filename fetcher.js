@@ -296,37 +296,15 @@ var self = module.exports = {
             var Table = require('cli-table');
             */
 
-            var list = [
-                {
-                    spring: self.coursesSpring
-                },
-                {
-                    summer: self.coursesSummer
-                },
-                {
-                    fall: self.coursesFall
-                },
-                {
-                    winter: self.coursesWinter
-                }
-            ];
+            var list = {
+                spring: self.coursesSpring,
+                summer: self.coursesSummer,
+                fall: self.coursesFall,
+                winter: self.coursesWinter,
+            };
 
-            list.forEach(function(obj) {
-                for (var quarter in obj) {
-                    /*
-                    var table = new Table({
-                        head: ['Quarter', 'Course', 'Frequency', 'Years'],
-                        colWidths: [15, 15, 15, 100]
-                    });
-                    for (var code in obj[quarter]) {
-                        var year = Object.keys(obj[quarter][code]);
-                        table.push([quarter, code, year.length + '/' + years.length, year.join(', ')])
-                        //console.log(code, 'was offered', year.length, year.length > 1 ? 'times' : 'time' , 'in', quarter, 'in the past', years.length, 'years', '->', year.join(', '));
-                    }
-                    write('./db/offered/display/' + quarter, table.toString());
-                    */
-                    self.write('./db/offered/' + quarter + '.json', obj[quarter]);
-                }
+            return Promise.map(Object.keys(list), function(quarter) {
+                return self.write('./db/offered/' + quarter + '.json', list[quarter]);
             })
         }).then(function() {
             self.coursesSpring = {};
