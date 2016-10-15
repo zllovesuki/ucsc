@@ -139,7 +139,7 @@ var checkForNewTerm = function() {
             console.log('Found a new term!', 'Fetching term', remoteNewTermName, '...');
             todoTerm = remoteNewTerm;
         }
-        return job.saveTermsList(todoTerm)
+        return job.saveTermsList()
         .then(function() {
             return job.saveCourseInfo(todoTerm)
         })
