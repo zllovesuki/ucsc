@@ -120,6 +120,7 @@ var checkForChanges = function() {
     /*
         TODO: locking
     */
+    console.log('Comparing S3 with RMP...')
     rmp = {};
     return Promise.all([
         s3ReadHandler('/rmp.json'),
