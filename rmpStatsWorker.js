@@ -86,7 +86,7 @@ var calculateStats = function(ratings) {
     var clarity = 0;
     var easy = 0;
     var overall = 0;
-    var quality = 0;
+    var quality = {};
 
     for (var i = 0, length = ratings.length; i < length; i++) {
         clarity += ratings[i].rClarity;
