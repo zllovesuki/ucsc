@@ -64,7 +64,7 @@ var s3ReadHandler = function(source) {
 
 var getScoresOnS3 = function(tid) {
     return new Promise(function(resolve, reject) {
-        s3.getFile('/tmp/scores/' + tid + '.json', function(err, res) {
+        s3.getFile('/rmp/scores/' + tid + '.json', function(err, res) {
             if (err) {
                 reject(err);
             }
@@ -144,6 +144,7 @@ var checkForChanges = function() {
                             getScoresOnS3(tid),
                             job.ucsc.getRateMyProfessorScoresByTid(tid)
                         ]).spread(function(s3Scores, rmpScores) {
+                            return;
                             if (typeof s3Scores.count === 'undefined' && typeof rmpScores.scores.count === 'undefined') {
                                 // not found on s3 or no ratings, and rmp returns no new data
                                 return;
