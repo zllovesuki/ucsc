@@ -1,5 +1,6 @@
 var ucsc = require('./index');
 var Promise = require('bluebird');
+var stringSimilarity = require('string-similarity');
 var elasticlunr = require('elasticlunr');
 var fs = require('fs');
 
@@ -322,10 +323,10 @@ var self = module.exports = {
 
     rmp: {},
     mapping: {},
-    saveRateMyProfessorsMappings: function() {
-        return self.read('./db/terms.json').then(function(json) {
+    saveRateMyProfessorsMappings: function(s3ReadHandler) {
+        return s3ReadHandler('/terms.json').then(function(json) {
             return Promise.map(json, function(term) {
-                return self.read('./db/terms/' + term.code + '.json').then(function(courses) {
+                return s3ReadHandler('/terms/' + term.code + '.json').then(function(courses) {
                     return Promise.map(Object.keys(courses), function(subject) {
                         return Promise.map(courses[subject], function(course) {
                             if (!(course.ins.f && course.ins.l)) {
@@ -350,28 +351,22 @@ var self = module.exports = {
                                 }
                                 return Promise.all([
                                     // try again with last name variation
-                                    ucsc.getRateMyProfessorScoresByLastName(lastNameVariation(course.ins.l)),
+                                    ucsc.getObjByLastName(lastNameVariation(course.ins.l)),
                                     // try again with "display name"
-                                    ucsc.getRateMyProfessorScoresByLastName(course.ins.d[0]),
+                                    ucsc.getObjByLastName(course.ins.d[0]),
                                     // try again with first + last
-                                    ucsc.getRateMyProfessorScoresByFullName(course.ins.f, course.ins.l)
-                                ]).spread(function(scoreObjA, scoreObjB, scoreObjC) {
-                                    if (lastNameVariation(course.ins.l) !== null && scoreObjA !== null) {
+                                    ucsc.getObjByFullName(course.ins.f, course.ins.l)
+                                ]).spread(function(objA, objB, objC) {
+                                    if (lastNameVariation(course.ins.l) !== null && objA !== null) {
                                         // We are not going to check first name similarity again, because we are confident that the variation is very rare
                                         console.log('Found a good match based on last name variation', lastNameVariation(course.ins.l), ':', course.ins.l);
-                                        return {
-                                            tid: scoreObjA.tid
-                                        }
-                                    }else if (scoreObjB !== null) {
+                                        return objA
+                                    }else if (objB !== null) {
                                         console.log('Found a good match based on display name', course.ins.d[0]);
-                                        return {
-                                            tid: scoreObjB.tid
-                                        }
-                                    }else if (scoreObjC !== null) {
+                                        return objB
+                                    }else if (objC !== null) {
                                         console.log('Found a good match based on full name', course.ins.f, course.ins.l);
-                                        return {
-                                            tid: scoreObjC.tid
-                                        }
+                                        return objC
                                     }else{
                                         console.log('Ratings for', course.ins.f, course.ins.l, 'not found on RMP based on last name and full name, not even display name');
                                         return null;
@@ -384,17 +379,17 @@ var self = module.exports = {
                                 })
                             }
                             var fetchScores = function() {
-                                return ucsc.getRateMyProfessorScoresByLastName(course.ins.l).then(function(scoreObj) {
+                                return ucsc.getObjByLastName(course.ins.l).then(function(obj) {
                                     console.log('Search by last name', course.ins.l);
-                                    if (scoreObj !== null) {
-                                        var resultLastName = scoreObj.name.substring(0, scoreObj.name.indexOf(',')).toLowerCase();
-                                        var resultFirstname = scoreObj.name.substring(scoreObj.name.indexOf(',') + 2).toLowerCase();
+                                    if (obj !== null) {
+                                        var resultLastName = obj.name.substring(0, obj.name.indexOf(',')).toLowerCase();
+                                        var resultFirstname = obj.name.substring(obj.name.indexOf(',') + 2).toLowerCase();
                                         if (course.ins.l.toLowerCase() == resultLastName
                                         && stringSimilarity.compareTwoStrings(course.ins.f.toLowerCase(), resultFirstname) > 0.5) {
                                             // we shall call it a match
                                             console.log('Found a good match based on last name', course.ins.l, 'Results', resultFirstname, resultLastName, ';', 'Current', course.ins.f, course.ins.l);
-                                            console.log('Saving tid', 'for', course.ins.f, course.ins.l, scoreObj.tid);
-                                            self.mapping[course.ins.f + course.ins.l] = scoreObj.tid;
+                                            console.log('Saving tid', 'for', course.ins.f, course.ins.l, obj.tid);
+                                            self.mapping[course.ins.f + course.ins.l] = obj.tid;
                                         }else{
                                             return fetch();
                                         }
@@ -416,9 +411,9 @@ var self = module.exports = {
             }, { concurrency: 1 })
             .then(function() {
                 console.log('Saving mappings')
-                return self.write('./db/rmp.json', mapping)
+                return self.write('./db/rmp.json', self.mapping)
                 .then(function() {
-                    return self.write('./db/timestamp/rmp.json', JSON.stringify(Math.round(+new Date()/1000)));
+                    return self.write('./db/timestamp/rmp.json', Math.round(+new Date()/1000));
                 })
             })
         })
