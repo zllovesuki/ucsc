@@ -184,6 +184,7 @@ var checkForChanges = function() {
 }
 
 checkForChanges().then(function() {
+    console.log('Next data fetch is 14 days later.')
     setTimeout(function() {
         checkForChanges()
     }, 1209600 * 1000) // check for changes every 14 days
