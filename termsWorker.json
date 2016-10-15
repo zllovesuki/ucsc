@@ -3,7 +3,7 @@
         {
             "name": "ucsc-terms-worker",
             "script": "termsWorker.js",
-            "watch": true,
+            "watch": false,
             "restart_delay": 5000
         }
     ]

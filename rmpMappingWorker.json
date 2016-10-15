@@ -3,7 +3,7 @@
         {
             "name": "ucsc-rmp-mapping-worker",
             "script": "rmpMappingWorker.js",
-            "watch": true,
+            "watch": false,
             "restart_delay": 5000
         }
     ]
