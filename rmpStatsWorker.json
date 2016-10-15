@@ -1,0 +1,10 @@
+{
+    "apps": [
+        {
+            "name": "ucsc-rmp-stats-worker",
+            "script": "rmpStatsWorker.js",
+            "watch": false,
+            "restart_delay": 5000
+        }
+    ]
+}

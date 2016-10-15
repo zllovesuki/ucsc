@@ -4,6 +4,7 @@ var knox = require('knox');
 var config = require('./config');
 var path = require('path');
 var fs = require('fs')
+var pm2 = require('pm2')
 
 var s3 = knox.createClient(config.s3);
 
@@ -33,7 +34,10 @@ var s3ReadHandler = function(source) {
     return new Promise(function(resolve, reject) {
         s3.getFile(source, function(err, res) {
             if (err) {
-                reject(err);
+                return reject(err);
+            }
+            if (res.statusCode == 404) {
+                return reject('Not Found')
             }
             var data = '';
             res.on('data', function(chunk) {
@@ -96,6 +100,23 @@ var downloadNewMappings = function() {
     })
 }
 
+var startStatsWorker = function() {
+    console.log('Starting stats worker')
+    return new Promise(function(resolve, reject) {
+        pm2.connect(function(err) {
+            if (err) {
+                return reject(err);
+            }
+            pm2.start(__dirname + '/rmpStatsWorker.json', function(err, apps) {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve();
+            })
+        })
+    });
+}
+
 shouldStartFresh().then(function(weShould) {
     if (weShould) {
         // initialize everything
@@ -106,10 +127,11 @@ shouldStartFresh().then(function(weShould) {
     }else{
         console.log('Mappings already populated on S3.')
         console.log('Next data fetch is 14 days later.')
-        // TODO: start the actual fetching worker
-        setTimeout(function() {
-            downloadNewMappings()
-        }, 1209600 * 1000) // delay the fetching to 14 days later
+        startStatsWorker().then(function() {
+            setTimeout(function() {
+                downloadNewMappings()
+            }, 1209600 * 1000) // delay the fetching to 14 days later
+        })
     }
 }).catch(function(e) {
     console.error('S3 Client returns Error', e)
