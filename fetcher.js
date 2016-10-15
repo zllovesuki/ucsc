@@ -98,6 +98,9 @@ var self = module.exports = {
                     console.error('Error saving', term.name)
                 })
             }, { concurrency: 1 })
+        }).then(function() {
+            self.courseListTimestamp = {};
+            self.foundTime = {};
         })
     },
 
@@ -136,7 +139,8 @@ var self = module.exports = {
                                 console.log('No course number found, skipping...')
                             }
                         }, { concurrency: 50 })
-                    }, { concurrency: 2 }).then(function() {
+                    }, { concurrency: 2 })
+                    .then(function() {
                         console.log('Saving term', term.name)
                         self.courseInfoTimestamp[term.code] = Math.round(+new Date()/1000)
                         return self.write('./db/courses/' + term.code + '.json', self.coursesInfo[term.code])
@@ -147,6 +151,9 @@ var self = module.exports = {
                     })
                 })
             }, { concurrency: 1 })
+        }).then(function() {
+            self.courseInfoTimestamp = {};
+            self.coursesInfo = {};
         })
     },
 
@@ -196,6 +203,9 @@ var self = module.exports = {
                     })
                 })
             }, { concurrency: 1 })
+        }).then(function() {
+            self.indexTimestamp = {};
+            self.index = {};
         })
     },
 
@@ -318,6 +328,11 @@ var self = module.exports = {
                     self.write('./db/offered/' + quarter + '.json', obj[quarter]);
                 }
             })
+        }).then(function() {
+            self.coursesSpring = {};
+            self.coursesSummer = {};
+            self.coursesFall = {};
+            self.coursesWinter = {};
         })
     },
 

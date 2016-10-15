@@ -148,7 +148,6 @@ var checkForNewTerm = function() {
         .then(function() {
             return uploadOneTerm(todoTerm)
         })
-        .then(dirtyGC)
     }).catch(function(e) {
         console.error('Error thrown in checkForNewTerm', e)
         console.log('Continue...')
