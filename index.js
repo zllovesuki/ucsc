@@ -420,6 +420,15 @@ var getRateMyProfessorScoresByLastName = function(firstName, lastName) {
     })
 }
 
+var getRateMyProfessorScoresByTid = function(tid) {
+    return fetchRateMyProfessorRawDom(tid).then(function(body) {
+        return {
+            tid: tid,
+            scores: parseRateMyProfessorFromSelector(body)
+        }
+    })
+}
+
 var getRateMyProfessorRatingsByFullName = function(firstName, lastName) {
     var fetch = function(obj) {
         return fetchRateMyProfessorJSONAll(obj.tid).then(function(ratings) {
@@ -453,6 +462,15 @@ var getRateMyProfessorRatingsByLastName = function(lastName) {
             return null;
         }
         return fetch(obj);
+    })
+}
+
+var getRateMyProfessorRatingsByTid = function(tid) {
+    return fetchRateMyProfessorJSONAll(tid).then(function(ratings) {
+        return {
+            tid: tid,
+            ratings: ratings
+        }
     })
 }
 
@@ -1143,10 +1161,14 @@ module.exports = {
     getEnrollment: getEnrollment,
     getSeats: getSeats,
     getGEDesc: getGEDesc,
+    getObjbyLastName: getObjByLastName,
+    getObjbyFullName: getObjByFullName,
     getRateMyProfessorScoresByFullName: getRateMyProfessorScoresByFullName,
     getRateMyProfessorScoresByLastName: getRateMyProfessorScoresByLastName,
+    getRateMyProfessorScoresByTid: getRateMyProfessorScoresByTid,
     getRateMyProfessorRatingsByFullName: getRateMyProfessorRatingsByFullName,
     getRateMyProfessorRatingsByLastName: getRateMyProfessorRatingsByLastName,
+    getRateMyProfessorRatingsByTid: getRateMyProfessorRatingsByTid,
     getMaps: getMaps,
     test: testReq
 }
