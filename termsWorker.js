@@ -131,8 +131,18 @@ var checkForNewTerm = function() {
         var remoteNewTerm = pisaTerms[0].code;
         var remoteNewTermName = pisaTerms[0].name;
         if (localNewTerm >= remoteNewTerm) {
-            console.log('No new terms found...')
-            return;
+            console.log('No new terms found.')
+            console.log('But we will update the latest term on S3...')
+            return job.saveTermsList(localNewTerm)
+            .then(function() {
+                return job.saveCourseInfo(localNewTerm)
+            })
+            .then(job.buildIndex)
+            .then(job.calculateTermsStats)
+            .then(function() {
+                return uploadOneTerm(localNewTerm)
+            })
+            .then(dirtyGC)
         }
         // now we should fetch the new term
         console.log('Found a new term!', 'Fetching term', remoteNewTermName, '...');
@@ -152,7 +162,7 @@ var checkForNewTerm = function() {
     }).finally(function() {
         setTimeout(function() {
             checkForNewTerm()
-        }, 259200 * 1000) // check for new term every 3 days
+        }, 302400 * 1000) // check for new term every 3.5 days
     })
 }
 
