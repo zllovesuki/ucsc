@@ -133,7 +133,15 @@ var checkForNewTerm = function() {
         var todoTerm = localNewTerm;
         if (localNewTerm >= remoteNewTerm) {
             console.log('No new terms found.')
-            console.log('But we will update the latest term on S3...')
+            console.log('But we will update the latest term on S3...');
+            var start = s3Terms[0].date.start;
+            var today = new Date();
+            var deadline = new Date(start);
+            deadline.setDate(deadline.getDate() + 21 + 7);
+            if (deadline.getTime() < today.getTime()) {
+                console.log('But it is 7 days after the 21 days drop deadline, we will skip fetching the latest term.')
+                return;
+            }
         }else{
             // now we should fetch the new term
             console.log('Found a new term!', 'Fetching term', remoteNewTermName, '...');
