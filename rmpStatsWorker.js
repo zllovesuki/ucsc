@@ -161,7 +161,7 @@ var checkForChanges = function() {
                             return job.ucsc.getRateMyProfessorRatingsByTid(tid)
                             .then(function(rmpRatings) {
                                 console.log('Saving', tid)
-                                return job.write('./db/rmp/stats/' + tid + '.json', calculateTermsStats(rmpRatings.ratings))
+                                return job.write('./db/rmp/stats/' + tid + '.json', calculateStats(rmpRatings.ratings))
                                 .then(function() {
                                     return job.write('./db/rmp/ratings/' + tid + '.json', rmpRatings.ratings)
                                 })
