@@ -29,6 +29,70 @@ if (process.env.SOCKS) {
     var Agent = require('socks5-http-client/lib/Agent');
 }
 
+var calculateNextTermCode = function(currentLatestTermCode) {
+    currentLatestTermCode = currentLatestTermCode.toString()
+    var nextTermCode = 0;
+    switch (currentLatestTermCode[currentLatestTermCode.length - 1]) {
+        case '0': // Winter
+
+        case '2': // Spring
+
+        case '8': // Fall
+
+        nextTermCode = parseInt(currentLatestTermCode) + 2;
+
+        break;
+
+        case '4': // Summer
+
+        nextTermCode = parseInt(currentLatestTermCode) + 4;
+
+        break;
+    }
+    return nextTermCode;
+}
+
+var pad = function(n, width, z) {
+    z = z || '0';
+    n = n + '';
+    return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+} // http://stackoverflow.com/questions/10073699/pad-a-number-with-leading-zeros-in-javascript
+
+var calculateTermName = function(termCode) {
+    termCode = termCode % 2000;
+    termCode = pad(termCode, 3, 0);
+    var quarter = '';
+    var name = '';
+    switch (termCode[termCode.length - 1]) {
+        case '0': // Winter
+
+        quarter = 'Winter';
+
+        break;
+
+        case '2': // Spring
+
+        quarter = 'Spring';
+
+        break;
+
+        case '8': // Fall
+
+        quarter = 'Fall';
+
+        break;
+
+        case '4': // Summer
+
+        quarter = 'Summer';
+
+        break;
+    }
+    var year = '20' + termCode.substring(0, 2);
+    name = year + ' ' + quarter + ' Quarter';
+    return name;
+}
+
 // http://jsfiddle.net/cse_tushar/xEuUR/
 var twelveTo24 = function(time) {
     var hours = Number(time.match(/^(\d+)/)[1]);
@@ -1178,5 +1242,7 @@ module.exports = {
     getRateMyProfessorRatingsByLastName: getRateMyProfessorRatingsByLastName,
     getRateMyProfessorRatingsByTid: getRateMyProfessorRatingsByTid,
     getMaps: getMaps,
-    test: testReq
+    test: testReq,
+    calculateTermName: calculateTermName,
+    calculateNextTermCode: calculateNextTermCode
 }

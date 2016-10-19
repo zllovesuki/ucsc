@@ -118,43 +118,35 @@ var checkForNewTerm = function() {
         TODO: locking
     */
     console.log('Checking for new terms on pisa');
-    return Promise.all([
-        getTermsJsonOnS3(),
-        job.ucsc.getTerms()
-    ]).spread(function(s3Terms, pisaTerms) {
-        // Sort s3Terms desc by code
+    return getTermsJsonOnS3().then(function(s3Terms) {
         s3Terms.sort(function(a, b) { return b.code - a.code });
-        // Sort pisaTerms desc by code
-        pisaTerms.sort(function(a, b) { return b.code - a.code });
-        // Now you see me...
         var localNewTerm = s3Terms[0].code;
-        var remoteNewTerm = pisaTerms[0].code;
-        var remoteNewTermName = pisaTerms[0].name;
-        var todoTerm = localNewTerm;
-        if (localNewTerm >= remoteNewTerm) {
-            console.log('No new terms found.')
-            console.log('But we will update the latest term on S3...');
-            var start = s3Terms[0].date.start;
-            var today = new Date();
-            var deadline = new Date(start);
-            deadline.setDate(deadline.getDate() + 21 + 7);
-            if (deadline.getTime() < today.getTime()) {
-                console.log('But it is 7 days after the 21 days drop deadline, we will skip fetching the latest term.')
-                return;
+        var remoteNewTerm = job.ucsc.calculateNextTermCode(localNewTerm);
+        return job.ucsc.getCourses(remoteNewTerm, 25)
+        .then(function(remoteCourses) {
+            if (Object.keys(remoteCourses).length > 0) {
+                console.log('We found new term.')
+                return job.saveTermsList(remoteNewTerm)
+                .then(function() {
+                    return job.saveCourseInfo(remoteNewTerm)
+                })
+                .then(job.buildIndex)
+                .then(job.calculateTermsStats)
+                .then(function() {
+                    return uploadOneTerm(remoteNewTerm)
+                })
+            }else{
+                console.log('No new terms found.')
+                console.log('But we will update the latest term on S3...');
+                var start = s3Terms[0].date.start;
+                var today = new Date();
+                var deadline = new Date(start);
+                deadline.setDate(deadline.getDate() + 21 + 7);
+                if (deadline.getTime() < today.getTime()) {
+                    console.log('But it is 7 days after the 21 days drop deadline, we will skip fetching the latest term.')
+                    return;
+                }
             }
-        }else{
-            // now we should fetch the new term
-            console.log('Found a new term!', 'Fetching term', remoteNewTermName, '...');
-            todoTerm = remoteNewTerm;
-        }
-        return job.saveTermsList()
-        .then(function() {
-            return job.saveCourseInfo(todoTerm)
-        })
-        .then(job.buildIndex)
-        .then(job.calculateTermsStats)
-        .then(function() {
-            return uploadOneTerm(todoTerm)
         })
     }).catch(function(e) {
         console.error('Error thrown in checkForNewTerm', e)

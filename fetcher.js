@@ -42,14 +42,20 @@ var self = module.exports = {
     */
     courseListTimestamp: {},
     foundTime: {},
-    saveTermsList: function(skipLessThan) {
-        skipLessThan = (typeof skipLessThan === 'undefined' ? 0 : skipLessThan);
+    saveTermsList: function(termCodeToAppend) {
+        termCodeToAppend = (typeof termCodeToAppend === 'undefined' ? null : termCodeToAppend)
         return ucsc.getTerms().then(function(terms) {
-            return Promise.map(terms, function(term) {
-                if ( term.code < skipLessThan ) {
-                    console.log('Skipping', term.name, 'as specified')
-                    return;
+            if (termCodeToAppend !== null) {
+                if (terms.filter(function(el) {
+                    return el.code == termCodeToAppend
+                }).length === 0) {
+                    terms.unshift({
+                        code: termCodeToAppend,
+                        name: ucsc.calculateTermName(termCodeToAppend)
+                    })
                 }
+            }
+            return Promise.map(terms, function(term) {
                 self.foundTime[term.code] = false;
                 return ucsc.getCourses(term.code, 3000).then(function(courses) {
                     return Promise.map(Object.keys(courses), function(subject) {
