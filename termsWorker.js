@@ -122,19 +122,12 @@ var checkForNewTerm = function() {
         s3Terms.sort(function(a, b) { return b.code - a.code });
         var localNewTerm = s3Terms[0].code;
         var remoteNewTerm = job.ucsc.calculateNextTermCode(localNewTerm);
+        var todoTerm = localNewTerm;
         return job.ucsc.getCourses(remoteNewTerm, 25)
         .then(function(remoteCourses) {
             if (Object.keys(remoteCourses).length > 0) {
-                console.log('We found new term.')
-                return job.saveTermsList(remoteNewTerm)
-                .then(function() {
-                    return job.saveCourseInfo(remoteNewTerm)
-                })
-                .then(job.buildIndex)
-                .then(job.calculateTermsStats)
-                .then(function() {
-                    return uploadOneTerm(remoteNewTerm)
-                })
+                console.log('We found a new term.')
+                todoTerm = remoteNewTerm;
             }else{
                 console.log('No new terms found.')
                 console.log('But we will update the latest term on S3...');
@@ -147,6 +140,15 @@ var checkForNewTerm = function() {
                     return;
                 }
             }
+            return job.saveTermsList(todoTerm)
+            .then(function() {
+                return job.saveCourseInfo(todoTerm)
+            })
+            .then(job.buildIndex)
+            .then(job.calculateTermsStats)
+            .then(function() {
+                return uploadOneTerm(todoTerm)
+            })
         })
     }).catch(function(e) {
         console.error('Error thrown in checkForNewTerm', e)
