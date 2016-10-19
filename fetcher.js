@@ -50,7 +50,7 @@ var self = module.exports = {
                     return el.code == termCodeToAppend
                 }).length === 0) {
                     terms.unshift({
-                        code: termCodeToAppend,
+                        code: termCodeToAppend.toString(),
                         name: ucsc.calculateTermName(termCodeToAppend)
                     })
                 }
