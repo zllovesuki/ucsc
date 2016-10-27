@@ -680,9 +680,9 @@ var parseCourseDOMFromSelector = function(body) {
     // infoDom[0] is the first column; infoDom[1] is the second column
     var dd = $('dd', infoDom[0]);
     // dd[4] is # of credits; dd[5] is GE
-    course.ty = dd[3].children[0].data;
-    course.cr = dd[4].children[0].data.match(/\d+/g)[0];
-    course.ge = dd[5].children[0].data.replace(/\s/g, '').split(',');
+    course.ty = (dd[3].children[0] ? dd[3].children[0].data : null)
+    course.cr = (dd[4].children[0] ? dd[4].children[0].data.match(/\d+/g)[0] : null)
+    course.ge = (dd[5].children[0] ? dd[5].children[0].data.replace(/\s/g, '').split(',') : null)
     if (course.ge[0] === '') course.ge = [];
 
     // Currently we are only interested in static data
