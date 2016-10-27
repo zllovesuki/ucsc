@@ -156,7 +156,7 @@ var checkForNewTerm = function() {
     }).finally(function() {
         setTimeout(function() {
             checkForNewTerm()
-        }, 172800 * 1000) // check for new term every other day
+        }, 86400 * 1000) // check for new term every day
     })
 }
 
