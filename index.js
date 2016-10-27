@@ -607,11 +607,11 @@ var parseSeatsFromSelector = function(body) {
     */
 
     seats.status = enrollDD[0].children[1].data.trim();
-    seats.avail = parseInt(enrollDD[1].children[0].data);
-    seats.cap = parseInt(enrollDD[2].children[0].data);
-    seats.enrolled = parseInt(enrollDD[3].children[0].data);
-    seats.waitCap = parseInt(enrollDD[4].children[0].data);
-    seats.waitTotal = parseInt(enrollDD[5].children[0].data);
+    seats.avail = enrollDD[1].children[0] ? parseInt(enrollDD[1].children[0].data) : null;
+    seats.cap = enrollDD[2].children[0] ? parseInt(enrollDD[2].children[0].data) : null;
+    seats.enrolled = enrollDD[3].children[0] ? parseInt(enrollDD[3].children[0].data) : null;
+    seats.waitCap = enrollDD[4].children[0] ? parseInt(enrollDD[4].children[0].data) : null;
+    seats.waitTotal = enrollDD[5].children[0] ? parseInt(enrollDD[5].children[0].data) : null;
 
     var sectionDom = null;
     var numPossibleSectionDom = bodyDom.length;
