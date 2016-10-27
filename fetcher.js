@@ -131,8 +131,12 @@ var self = module.exports = {
                                 var getCourse = function(term, course) {
                                     return ucsc.getCourse(term.code, course.num)
                                     .then(function(courseInfo) {
-                                        console.log('Term', term.name, 'course number', course.num, 'fetched')
-                                        delete courseInfo.md;
+                                        if (courseInfo === false) {
+                                            console.error('Term', term.name, 'course number', course.num, 'malformed, saved as false');
+                                        }else{
+                                            console.log('Term', term.name, 'course number', course.num, 'fetched');
+                                            delete courseInfo.md;
+                                        }
                                         self.coursesInfo[term.code][course.num] = courseInfo;
                                     })
                                 };
