@@ -185,9 +185,9 @@ var self = module.exports = {
                     return Promise.map(Object.keys(courses), function(subject) {
                         return Promise.map(courses[subject], function(course) {
                             if (course.num) {
-                                course.c = subject + ' ' + course.c.split(/(\d+)/).filter(Boolean).join(" ");
+                                course.c = subject + ' ' + course.c;
                                 //course.lo = course.loc;
-                                course.n = course.n.split(/(?=[A-Z])/).map(function(el) { return el.trim(); }).join(" ")
+                                course.n = course.n;
                                 course.f = course.ins.f;
                                 course.la = course.ins.l;
                                 course.d = course.ins.d[0];
