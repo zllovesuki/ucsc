@@ -172,6 +172,7 @@ shouldStartFresh().then(function(weShould) {
         .then(job.calculateTermsStats)
         .then(job.saveGEDesc)
         .then(job.saveMaps)
+        .then(job.saveSubjects)
         .then(uploadEverything)
         .then(dirtyGC)
     }else{
