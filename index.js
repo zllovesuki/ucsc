@@ -297,6 +297,27 @@ var getTerms = function() {
     })
 }
 
+var getSubjects = function() {
+    return secureRequest('https://pisa.ucsc.edu/class_search/index.php')
+    .then(function(body) {
+        var $ = cheerio.load(body);
+        var subjects = $('#subject')[0].children;
+
+        var actualSubjects = [];
+
+        for (var i = 0, length = subjects.length; i < length; i++) {
+            if (subjects[i].attribs && subjects[i].children) {
+                if (subjects[i].attribs.value.length < 1) continue;
+                actualSubjects.push({
+                    code: subjects[i].attribs.value,
+                    name: subjects[i].children[0].data
+                });
+            }
+        }
+        return actualSubjects;
+    })
+}
+
 var getCoursesRawDom = function(termId, limit) {
     return secureRequest('https://pisa.ucsc.edu/class_search/index.php', {
         'action': 'results',
@@ -1228,6 +1249,7 @@ var testReq = function(testURL) {
 }
 
 module.exports = {
+    getSubjects: getSubjects,
     getTerms: getTerms,
     getCourses: getCourses,
     getCourse: getCourse,

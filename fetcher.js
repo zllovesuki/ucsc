@@ -245,6 +245,20 @@ var self = module.exports = {
     },
 
     /*
+        Subject list
+    */
+    saveSubjects: function() {
+        return ucsc.getSubjects().then(function(subjects) {
+            return self.write('./db/subjects.json', subjects).then(function() {
+                console.log('Subject list saved to', './db/subjects.json');
+            })
+            .then(function() {
+                return self.write('./db/timestamp/subjects.json', Math.round(+new Date()/1000))
+            })
+        })
+    },
+
+    /*
         Course offering frequency
     */
     coursesSpring: {},
