@@ -195,7 +195,7 @@ var self = module.exports = {
                     self.index[term.code].addField('la');
                     self.index[term.code].addField('d');
                     self.index[term.code].setRef('b');
-                    selsaveRateMyProfessorsMappingsf.index[term.code].saveDocument(false);
+                    self.index[term.code].saveDocument(false);
 
                     return Promise.map(Object.keys(courses), function(subject) {
                         return Promise.map(courses[subject], function(course) {
