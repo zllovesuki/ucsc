@@ -185,7 +185,7 @@ var self = module.exports = {
     indexTimestamp: {},
     buildIndex: function() {
         return self.read('./db/terms.json').then(function(json) {
-            return Promise.map(json, function(term) {saveRateMyProfessorsMappings
+            return Promise.map(json, function(term) {
                 return self.read('./db/terms/' + term.code + '.json').then(function(courses) {
                     self.index[term.code] = elasticlunr();
 
