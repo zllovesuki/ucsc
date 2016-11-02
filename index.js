@@ -1000,6 +1000,7 @@ var parseDOMFromSelector = function(body) {
         if (i % 2 === 0) {
             obj.c = headers[i].children[0].data;
         } else {
+            obj.l = null;
             obj.n = headers[i].children[0].data;
             courses.push(obj);
             obj = {};
