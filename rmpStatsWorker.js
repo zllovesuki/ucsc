@@ -145,7 +145,6 @@ var checkForChanges = function() {
                             getScoresOnS3(tid),
                             job.ucsc.getRateMyProfessorScoresByTid(tid)
                         ]).spread(function(s3Scores, rmpScores) {
-                            return;
                             if (typeof s3Scores.count === 'undefined' && typeof rmpScores.scores.count === 'undefined') {
                                 // not found on s3 or no ratings, and rmp returns no new data
                                 return;
