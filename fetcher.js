@@ -36,6 +36,17 @@ var self = module.exports = {
             });
         })
     },
+    intersect: function(a, b) {
+        var t;
+        if (b.length > a.length) t = b, b = a, a = t; // indexOf to loop over shorter
+        return a
+            .filter(function(e) {
+                return b.indexOf(e) !== -1;
+            })
+            .filter(function(e, i, c) { // extra step to remove duplicates
+                return c.indexOf(e) === i;
+            });
+    }, // http://stackoverflow.com/questions/16227197/compute-intersection-of-two-arrays-in-javascript
 
     /*
         General course list
@@ -174,7 +185,7 @@ var self = module.exports = {
     indexTimestamp: {},
     buildIndex: function() {
         return self.read('./db/terms.json').then(function(json) {
-            return Promise.map(json, function(term) {
+            return Promise.map(json, function(term) {saveRateMyProfessorsMappings
                 return self.read('./db/terms/' + term.code + '.json').then(function(courses) {
                     self.index[term.code] = elasticlunr();
 
@@ -184,7 +195,7 @@ var self = module.exports = {
                     self.index[term.code].addField('la');
                     self.index[term.code].addField('d');
                     self.index[term.code].setRef('b');
-                    self.index[term.code].saveDocument(false);
+                    selsaveRateMyProfessorsMappingsf.index[term.code].saveDocument(false);
 
                     return Promise.map(Object.keys(courses), function(subject) {
                         return Promise.map(courses[subject], function(course) {
@@ -341,7 +352,10 @@ var self = module.exports = {
     rmp: {},
     mapping: {},
     saveRateMyProfessorsMappings: function(s3ReadHandler) {
-        return s3ReadHandler('/terms.json').then(function(json) {
+        return Promise.all([
+            s3ReadHandler('/terms.json'),
+            self.read('./tidManualMappings.json')
+        ]).spread(function(json, manual) {
             return Promise.map(json, function(term) {
                 return s3ReadHandler('/terms/' + term.code + '.json').then(function(courses) {
                     return Promise.map(Object.keys(courses), function(subject) {
@@ -396,6 +410,12 @@ var self = module.exports = {
                                 })
                             }
                             var fetchScores = function() {
+                                var manualList = self.intersect(course.ins.d, Object.keys(manual));
+                                if (manualList.length > 0) {
+                                    console.log('Using manual overrides for', course.ins.f, course.ins.l, 'with', manual[manualList[0]]);
+                                    self.mapping[course.ins.f + course.ins.l] = manual[manualList[0]];
+                                    return;
+                                }
                                 return ucsc.getObjByLastName(course.ins.l).then(function(obj) {
                                     console.log('Search by last name', course.ins.l);
                                     if (obj !== null) {
