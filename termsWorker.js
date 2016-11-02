@@ -161,9 +161,10 @@ var checkForNewTerm = function() {
 }
 
 shouldStartFresh().then(function(weShould) {
-    if (weShould) {
+    if (weShould || !!process.env.FRESH) {
         // initialize everything
-        console.log('No data found on S3, fetching fresh data...')
+        if (!!process.env.FRESH) console.log('Forced fresh start')
+        else console.log('No data found on S3, fetching fresh data...')
         // download everything...
         // then uploading everything
         return job.saveTermsList()
