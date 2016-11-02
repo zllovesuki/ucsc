@@ -898,10 +898,10 @@ var parseDOMFromClassData = function(body) {
             obj.l = classData.SESSION_CODE;
             obj.n = classData.DESCR;
             obj.num = parseInt(classData.CLASS_NBR);
-            // Comparing the classData, it seems that CLASS_MTG_NBR = NULL means that this class is cancelled,
-            // though I have no idea what CLASS_MTG_NBR stands for
+            // Comparing the classData, it seems that CLASS_STAT = 'X' means that this class is cancelled,
+            // which now make sense
             obj.loct.push({
-                t: (classData.CLASS_MTG_NBR === null ? false : parseTime(classData)),
+                t: (classData.CLASS_STAT == 'X' ? false : parseTime(classData)),
                 loc: classData.FAC_DESCR
             })
             //obj.ty = classData.SSR_COMPONENT;
