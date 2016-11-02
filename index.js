@@ -895,6 +895,7 @@ var parseDOMFromClassData = function(body) {
             obj.s = classData.CLASS_SECTION;
             obj.loct = [];
         }else{
+            obj.l = classData.SESSION_CODE;
             obj.n = classData.DESCR;
             obj.num = parseInt(classData.CLASS_NBR);
             // Comparing the classData, it seems that CLASS_MTG_NBR = NULL means that this class is cancelled,
