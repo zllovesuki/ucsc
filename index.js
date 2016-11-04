@@ -1421,8 +1421,8 @@ var parseTranscriptHTML = function(html) {
                             }else if (counter === 1) {
                                 name = name + classes[index].children[0].data;
                                 obj[name] = null;
-                                if (classes[index].parent.parent.parent.children[11].children && classes[index].parent.parent.parent.children[11].children[1]) {
-                                    obj[name] = classes[index].parent.parent.parent.children[11].children[1].children[0].children[0].data;
+                                if (classes[index].parent.parent.parent.children[11].children && classes[index].parent.parent.parent.children[11].children[0]) {
+                                    obj[name] = classes[index].parent.parent.parent.children[11].children[0].children[0].children[0].data;
                                 }
                                 courses.push(obj)
                                 name = '';
@@ -1436,14 +1436,15 @@ var parseTranscriptHTML = function(html) {
             }
         }
     })
-    var name = '';
+
+    var studentName = '';
     var studentID = '';
 
     Object.keys(info).forEach(function(index) {
         if (info[index].children && info[index].children[0]) {
             if (info[index].children[0].data.indexOf('Name') !== -1) {
-                name = info[index].children[0].data.replace(/\s+/, "")
-                name = name.substring(name.indexOf(':') + 1)
+                studentName = info[index].children[0].data.replace(/\s+/, "")
+                studentName = studentName.substring(studentName.indexOf(':') + 1)
             }
             if (info[index].children[0].data.indexOf('Student ID') !== -1) {
                 studentID = info[index].children[0].data.replace(/\s+/, "").match(/\d+/)[0]
@@ -1457,33 +1458,33 @@ var parseTranscriptHTML = function(html) {
         if (g[index].children &&
             g[index].children[1] &&
             g[index].children[1].children &&
-            g[index].children[1].children[1] &&
-            g[index].children[1].children[1].children &&
-            g[index].children[1].children[1].children[0] &&
-            g[index].children[1].children[1].children[0].children &&
-            g[index].children[1].children[1].children[0].children[0]
+            g[index].children[1].children[0] &&
+            g[index].children[1].children[0].children &&
+            g[index].children[1].children[0].children[0] &&
+            g[index].children[1].children[0].children[0].children &&
+            g[index].children[1].children[0].children[0].children[0]
         ) {
-            career[( g[index].children[1].children[1].children[0].children[0].data.indexOf('Transfer') !== -1 ? 'transferGPA' :
-                (g[index].children[1].children[1].children[0].children[0].data.indexOf('Comb') !== -1 ? 'combinedGPA' :
+            career[( g[index].children[1].children[0].children[0].children[0].data.indexOf('Transfer') !== -1 ? 'transferGPA' :
+                (g[index].children[1].children[0].children[0].children[0].data.indexOf('Comb') !== -1 ? 'combinedGPA' :
                     'courseGPA'
                 )
-            )] = g[index].children[3].children[1] ? g[index].children[3].children[1].children[0].children[0].data : null;
+            )] = g[index].children[3].children[0] ? g[index].children[3].children[0].children[0].children[0].data : null;
 
-            career[( g[index].children[5].children[1].children[0].children[0].data.indexOf('Transfer') !== -1 ? 'transferUnits' :
-                (g[index].children[5].children[1].children[0].children[0].data.indexOf('Comb') !== -1 ? 'combindUnits' :
+            career[( g[index].children[5].children[0].children[0].children[0].data.indexOf('Transfer') !== -1 ? 'transferUnits' :
+                (g[index].children[5].children[0].children[0].children[0].data.indexOf('Comb') !== -1 ? 'combindUnits' :
                     'courseUnits'
                 )
             )] = {
-                attempted: g[index].children[7].children[1].children[0].children[0].data,
-                earned: g[index].children[9].children[1].children[0].children[0].data,
-                gpaUnits: g[index].children[11].children[1].children[0].children[0].data,
-                points: g[index].children[13].children[1].children[0].children[0].data
+                attempted: g[index].children[7].children[0].children[0].children[0].data,
+                earned: g[index].children[9].children[0].children[0].children[0].data,
+                gpaUnits: g[index].children[11].children[0].children[0].children[0].data,
+                points: g[index].children[13].children[0].children[0].children[0].data
             }
         }
     })
 
     return {
-        name: name,
+        name: studentName,
         studentID: studentID,
         courses: all,
         career: career
