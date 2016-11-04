@@ -1395,6 +1395,69 @@ var getTranscriptHTML = function(username, password) {
     })
 }
 
+var parseTranscriptHTML = function(html) {
+    var $ = cheerio.load(html);
+
+    var dom = $('.c41 .c25 .c40 .c11 b');
+    var all = {};
+
+    Object.keys(dom).forEach(function(index) {
+        if (dom[index].children) {
+            if (dom[index].children[0]) {
+                // Yes, I know this is ugly, but it works
+                var classes = $(dom[index].parent.parent.parent.parent.parent.parent.parent.parent.next.next).find('.c45 .c25 .c6 .c11');
+                var counter = 0;
+                var courses = [];
+                var name = '';
+                var obj = {};
+                Object.keys(classes).forEach(function(index) {
+                    if (classes[index].children) {
+                        if (classes[index].children[0]) {
+                            if (counter === 3) counter = 0;
+                            if (counter === 0) {
+                                name = classes[index].children[0].data;
+                            }else if (counter === 1) {
+                                name = name + classes[index].children[0].data;
+                                obj[name] = null;
+                                if (classes[index].parent.parent.parent.children[11].children && classes[index].parent.parent.parent.children[11].children[1]) {
+                                    obj[name] = classes[index].parent.parent.parent.children[11].children[1].children[0].children[0].data;
+                                }
+                                courses.push(obj)
+                                name = '';
+                                obj = {};
+                            }
+                            counter++;
+                        }
+                    }
+                })
+                all[dom[index].children[0].data] = courses;
+            }
+        }
+    })
+
+    var info = $('.c19 .c11 b');
+    var name = '';
+    var studentID = '';
+
+    Object.keys(info).forEach(function(index) {
+        if (info[index].children && info[index].children[0]) {
+            if (info[index].children[0].data.indexOf('Name') !== -1) {
+                name = info[index].children[0].data.replace(/\s+/, "")
+                name = name.substring(name.indexOf(':') + 1)
+            }
+            if (info[index].children[0].data.indexOf('Student ID') !== -1) {
+                studentID = info[index].children[0].data.replace(/\s+/, "").match(/\d+/)[0]
+            }
+        }
+    })
+
+    return {
+        name: name,
+        studentID: studentID,
+        courses: all
+    }
+}
+
 module.exports = {
     getSubjects: getSubjects,
     getTerms: getTerms,
@@ -1415,5 +1478,6 @@ module.exports = {
     test: testReq,
     calculateTermName: calculateTermName,
     calculateNextTermCode: calculateNextTermCode,
-    getTranscriptHTML: getTranscriptHTML
+    getTranscriptHTML: getTranscriptHTML,
+    parseTranscriptHTML: parseTranscriptHTML
 }
