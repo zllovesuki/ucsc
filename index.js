@@ -1399,6 +1399,8 @@ var parseTranscriptHTML = function(html) {
     var $ = cheerio.load(html);
 
     var dom = $('.c41 .c25 .c40 .c11 b');
+    var info = $('.c19 .c11 b');
+    var g = $('.c46 .c65 .c39 .c45 .c25')
     var all = {};
 
     Object.keys(dom).forEach(function(index) {
@@ -1434,8 +1436,6 @@ var parseTranscriptHTML = function(html) {
             }
         }
     })
-
-    var info = $('.c19 .c11 b');
     var name = '';
     var studentID = '';
 
@@ -1451,10 +1451,42 @@ var parseTranscriptHTML = function(html) {
         }
     })
 
+    var career = {};
+
+    Object.keys(g).forEach(function(index) {
+        if (g[index].children &&
+            g[index].children[1] &&
+            g[index].children[1].children &&
+            g[index].children[1].children[1] &&
+            g[index].children[1].children[1].children &&
+            g[index].children[1].children[1].children[0] &&
+            g[index].children[1].children[1].children[0].children &&
+            g[index].children[1].children[1].children[0].children[0]
+        ) {
+            career[( g[index].children[1].children[1].children[0].children[0].data.indexOf('Transfer') !== -1 ? 'transferGPA' :
+                (g[index].children[1].children[1].children[0].children[0].data.indexOf('Comb') !== -1 ? 'combinedGPA' :
+                    'courseGPA'
+                )
+            )] = g[index].children[3].children[1] ? g[index].children[3].children[1].children[0].children[0].data : null;
+
+            career[( g[index].children[5].children[1].children[0].children[0].data.indexOf('Transfer') !== -1 ? 'transferUnits' :
+                (g[index].children[5].children[1].children[0].children[0].data.indexOf('Comb') !== -1 ? 'combindUnits' :
+                    'courseUnits'
+                )
+            )] = {
+                attempted: g[index].children[7].children[1].children[0].children[0].data,
+                earned: g[index].children[9].children[1].children[0].children[0].data,
+                gpaUnits: g[index].children[11].children[1].children[0].children[0].data,
+                points: g[index].children[13].children[1].children[0].children[0].data
+            }
+        }
+    })
+
     return {
         name: name,
         studentID: studentID,
-        courses: all
+        courses: all,
+        career: career
     }
 }
 
