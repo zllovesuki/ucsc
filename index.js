@@ -1396,99 +1396,110 @@ var getTranscriptHTML = function(username, password) {
 }
 
 var parseTranscriptHTML = function(html) {
-    var $ = cheerio.load(html);
+    try {
+        var $ = cheerio.load(html);
 
-    var dom = $('.c41 .c25 .c40 .c11 b');
-    var info = $('.c19 .c11 b');
-    var g = $('.c46 .c65 .c39 .c45 .c25')
-    var all = {};
+        var dom = $('.c41 .c25 .c40 .c11 b');
+        var info = $('.c19 .c11 b');
+        var g = $('.c46 .c65 .c39 .c45 .c25')
+        var all = {};
 
-    Object.keys(dom).forEach(function(index) {
-        if (dom[index].children) {
-            if (dom[index].children[0]) {
-                // Yes, I know this is ugly, but it works
-                var classes = $(dom[index].parent.parent.parent.parent.parent.parent.parent.parent.next.next).find('.c45 .c25 .c6 .c11');
-                var counter = 0;
-                var courses = [];
-                var name = '';
-                var obj = {};
-                Object.keys(classes).forEach(function(index) {
-                    if (classes[index].children) {
-                        if (classes[index].children[0]) {
-                            if (counter === 3) counter = 0;
-                            if (counter === 0) {
-                                name = classes[index].children[0].data;
-                            }else if (counter === 1) {
-                                name = name + classes[index].children[0].data;
-                                obj[name] = null;
-                                if (classes[index].parent.parent.parent.children[11].children && classes[index].parent.parent.parent.children[11].children[0]) {
-                                    obj[name] = classes[index].parent.parent.parent.children[11].children[0].children[0].children[0].data;
+        Object.keys(dom).forEach(function(index) {
+            if (dom[index].children) {
+                if (dom[index].children[0]) {
+                    // Yes, I know this is ugly, but it works
+                    var classes = $(dom[index].parent.parent.parent.parent.parent.parent.parent.parent.next.next).find('.c45 .c25 .c6 .c11');
+                    var counter = 0;
+                    var courses = [];
+                    var name = '';
+                    var obj = {};
+                    Object.keys(classes).forEach(function(index) {
+                        if (classes[index].children) {
+                            if (classes[index].children[0]) {
+                                if (counter === 3) counter = 0;
+                                if (counter === 0) {
+                                    name = classes[index].children[0].data;
+                                }else if (counter === 1) {
+                                    name = name + classes[index].children[0].data;
+                                    obj[name] = null;
+                                    if (classes[index].parent.parent.parent.children[11].children && classes[index].parent.parent.parent.children[11].children[0]) {
+                                        obj[name] = classes[index].parent.parent.parent.children[11].children[0].children[0].children[0].data;
+                                    }
+                                    courses.push(obj)
+                                    name = '';
+                                    obj = {};
                                 }
-                                courses.push(obj)
-                                name = '';
-                                obj = {};
+                                counter++;
                             }
-                            counter++;
                         }
-                    }
-                })
-                all[dom[index].children[0].data] = courses;
+                    })
+                    all[dom[index].children[0].data] = courses;
+                }
             }
+        })
+
+        var studentName = '';
+        var studentID = '';
+
+        Object.keys(info).forEach(function(index) {
+            if (info[index].children && info[index].children[0]) {
+                if (info[index].children[0].data.indexOf('Name') !== -1) {
+                    studentName = info[index].children[0].data.replace(/\s+/, "")
+                    studentName = studentName.substring(studentName.indexOf(':') + 1)
+                }
+                if (info[index].children[0].data.indexOf('Student ID') !== -1) {
+                    studentID = info[index].children[0].data.replace(/\s+/, "").match(/\d+/)[0]
+                }
+            }
+        })
+
+        var career = {};
+
+        Object.keys(g).forEach(function(index) {
+            if (g[index].children &&
+                g[index].children[1] &&
+                g[index].children[1].children &&
+                g[index].children[1].children[0] &&
+                g[index].children[1].children[0].children &&
+                g[index].children[1].children[0].children[0] &&
+                g[index].children[1].children[0].children[0].children &&
+                g[index].children[1].children[0].children[0].children[0]
+            ) {
+                career[( g[index].children[1].children[0].children[0].children[0].data.indexOf('Transfer') !== -1 ? 'transferGPA' :
+                    (g[index].children[1].children[0].children[0].children[0].data.indexOf('Comb') !== -1 ? 'combinedGPA' :
+                        'courseGPA'
+                    )
+                )] = g[index].children[3].children[0] ? g[index].children[3].children[0].children[0].children[0].data : null;
+
+                career[( g[index].children[5].children[0].children[0].children[0].data.indexOf('Transfer') !== -1 ? 'transferUnits' :
+                    (g[index].children[5].children[0].children[0].children[0].data.indexOf('Comb') !== -1 ? 'combindUnits' :
+                        'courseUnits'
+                    )
+                )] = {
+                    attempted: g[index].children[7].children[0].children[0].children[0].data,
+                    earned: g[index].children[9].children[0].children[0].children[0].data,
+                    gpaUnits: g[index].children[11].children[0].children[0].children[0].data,
+                    points: g[index].children[13].children[0].children[0].children[0].data
+                }
+            }
+        })
+
+        return {
+            name: studentName,
+            studentID: studentID,
+            courses: all,
+            career: career
         }
-    })
-
-    var studentName = '';
-    var studentID = '';
-
-    Object.keys(info).forEach(function(index) {
-        if (info[index].children && info[index].children[0]) {
-            if (info[index].children[0].data.indexOf('Name') !== -1) {
-                studentName = info[index].children[0].data.replace(/\s+/, "")
-                studentName = studentName.substring(studentName.indexOf(':') + 1)
-            }
-            if (info[index].children[0].data.indexOf('Student ID') !== -1) {
-                studentID = info[index].children[0].data.replace(/\s+/, "").match(/\d+/)[0]
-            }
-        }
-    })
-
-    var career = {};
-
-    Object.keys(g).forEach(function(index) {
-        if (g[index].children &&
-            g[index].children[1] &&
-            g[index].children[1].children &&
-            g[index].children[1].children[0] &&
-            g[index].children[1].children[0].children &&
-            g[index].children[1].children[0].children[0] &&
-            g[index].children[1].children[0].children[0].children &&
-            g[index].children[1].children[0].children[0].children[0]
-        ) {
-            career[( g[index].children[1].children[0].children[0].children[0].data.indexOf('Transfer') !== -1 ? 'transferGPA' :
-                (g[index].children[1].children[0].children[0].children[0].data.indexOf('Comb') !== -1 ? 'combinedGPA' :
-                    'courseGPA'
-                )
-            )] = g[index].children[3].children[0] ? g[index].children[3].children[0].children[0].children[0].data : null;
-
-            career[( g[index].children[5].children[0].children[0].children[0].data.indexOf('Transfer') !== -1 ? 'transferUnits' :
-                (g[index].children[5].children[0].children[0].children[0].data.indexOf('Comb') !== -1 ? 'combindUnits' :
-                    'courseUnits'
-                )
-            )] = {
-                attempted: g[index].children[7].children[0].children[0].children[0].data,
-                earned: g[index].children[9].children[0].children[0].children[0].data,
-                gpaUnits: g[index].children[11].children[0].children[0].children[0].data,
-                points: g[index].children[13].children[0].children[0].children[0].data
-            }
-        }
-    })
-
-    return {
-        name: studentName,
-        studentID: studentID,
-        courses: all,
-        career: career
+    }catch(e) {
+        return false;
     }
+}
+
+var getTranscript = function(username, password) {
+    return getTranscriptHTML(username, password).then(function(html) {
+        if (html === false) return false;
+        return parseTranscriptHTML(html);
+    })
 }
 
 module.exports = {
@@ -1512,5 +1523,6 @@ module.exports = {
     calculateTermName: calculateTermName,
     calculateNextTermCode: calculateNextTermCode,
     getTranscriptHTML: getTranscriptHTML,
-    parseTranscriptHTML: parseTranscriptHTML
+    parseTranscriptHTML: parseTranscriptHTML,
+    getTranscript: getTranscript
 }
