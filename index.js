@@ -158,6 +158,50 @@ var parseTime = function(classData) {
     return obj;
 }
 
+var getHiddenForm = function(body) {
+    var $ = cheerio.load(body);
+    var form = $('#win0divPSHIDDENFIELDS input');
+    var obj = {};
+    Object.keys(form).forEach(function(index) {
+        if (form[index].attribs) obj[form[index].attribs.name] = form[index].attribs.value;
+    })
+    // Now we can actually make the request
+    /*
+        Including the following params will give you a JavaScript redirect
+
+        obj.ICAJAX = 1;
+        obj.ICNAVTYPEDROPDOWN = 1;
+    */
+    return obj;
+}
+
+var myucscRequest = function(ua, cookie, url, data, referer) {
+    return new Promise(function(resolve, reject) {
+        var obj = {
+            method: 'GET',
+            url: url,
+            headers: {
+                'User-Agent': ua
+            }
+        }
+        if (referer) obj.headers['Referer'] = referer
+        obj.jar = cookie;
+        if (data) {
+            obj.method = 'POST';
+            obj.form = data;
+        }
+        request(obj, function(err, response, body) {
+            if (err) {
+                return reject(err);
+            }
+            return resolve({
+                headers: response.headers,
+                body: body
+            });
+        })
+    });
+}
+
 var secureRequest = function(url, data, jar) {
     jar = (typeof jar === 'undefined' ? false : true);
     return new Promise(function(resolve, reject) {
@@ -1250,6 +1294,107 @@ var testReq = function(testURL) {
     return secureRequest(testURL)
 }
 
+var getTranscriptHTML = function(username, password) {
+    var cookie = request.jar();
+    var ua = faker.internet.userAgent();
+    return myucscRequest(ua, cookie, 'https://my.ucsc.edu/psp/ep9prd/?cmd=login&languageCd=ENG&').then(function(myucscLogin) {
+        return myucscRequest(ua, cookie, 'https://my.ucsc.edu/psp/ep9prd/?cmd=login&languageCd=ENG', {
+            timezoneOffset: 420,
+            ptmode: 'f',
+            ptlangcd: 'ENG',
+            ptinstalledlang: 'ENG',
+            userid: username,
+            pwd: password
+        }, 'https://my.ucsc.edu/psp/ep9prd/?cmd=login&languageCd=ENG&').then(function(postLogin) {
+            if (postLogin.headers.location != 'https://my.ucsc.edu/psc/ep9prd/EMPLOYEE/EMPL/s/WEBLIB_PTBR.ISCRIPT1.FieldFormula.IScript_StartPage?HPTYPE=C') {
+                console.error('Incorrect Credentials')
+                return false;
+            }
+            return myucscRequest(ua, cookie, 'https://my.ucsc.edu/psp/ep9prd/EMPLOYEE/EMPL/h/?tab=DEFAULT')
+            .then(function(mainPage) {
+                return Promise.all([
+                    // tracking
+                    myucscRequest(ua, cookie, 'https://my.ucsc.edu/psc/ep9prd/EMPLOYEE/EMPL/s/WEBLIB_EO_PE_SR.ISCRIPT1.FieldFormula.Iscript_Track?&crefname=SCEP_STUDENT_CENTER&crefurl=https%3A%2F%2Fmy.ucsc.edu%2Fpsp%2Fep9prd%2FEMPLOYEE%2FPSFT_CSPRD%2Fc%2FSA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL%3FFolderPath%3DPORTAL_ROOT_OBJECT.SCEP_MY_STUDENT_CENTER.SCEP_STUDENT_CENTER%26IsFolder%3Dfalse%26IgnoreParamTempl%3DFolderPath%252cIsFolder', null, 'https://my.ucsc.edu/psp/ep9prd/EMPLOYEE/EMPL/h/?tab=DEFAULT'),
+                    // actual student center page
+                    myucscRequest(ua, cookie, 'https://my.ucsc.edu/psp/ep9prd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL?FolderPath=PORTAL_ROOT_OBJECT.SCEP_MY_STUDENT_CENTER.SCEP_STUDENT_CENTER&IsFolder=false&IgnoreParamTempl=FolderPath%2cIsFolder', null, 'https://my.ucsc.edu/psp/ep9prd/EMPLOYEE/EMPL/h/?tab=DEFAULT')
+                ]).spread(function(tracking, skeleton) {
+                    return myucscRequest(ua, cookie, 'https://ais-cs.ucsc.edu/psc/csprd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL?FolderPath=PORTAL_ROOT_OBJECT.SCEP_MY_STUDENT_CENTER.SCEP_STUDENT_CENTER&IsFolder=false&IgnoreParamTempl=FolderPath%2cIsFolder&PortalActualURL=https%3a%2f%2fais-cs.ucsc.edu%2fpsc%2fcsprd%2fEMPLOYEE%2fPSFT_CSPRD%2fc%2fSA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL&PortalContentURL=https%3a%2f%2fais-cs.ucsc.edu%2fpsc%2fcsprd%2fEMPLOYEE%2fPSFT_CSPRD%2fc%2fSA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL&PortalContentProvider=PSFT_CSPRD&PortalCRefLabel=My%20Student%20Center%20Page&PortalRegistryName=EMPLOYEE&PortalServletURI=https%3a%2f%2fmy.ucsc.edu%2fpsp%2fep9prd%2f&PortalURI=https%3a%2f%2fmy.ucsc.edu%2fpsc%2fep9prd%2f&PortalHostNode=EMPL&NoCrumbs=yes&PortalKeyStruct=yes', null, 'https://my.ucsc.edu/psp/ep9prd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL?FolderPath=PORTAL_ROOT_OBJECT.SCEP_MY_STUDENT_CENTER.SCEP_STUDENT_CENTER&IsFolder=false&IgnoreParamTempl=FolderPath%2cIsFolder')
+                })
+            })
+            .then(function(frame) {
+                // the myAcad frame page contains a hidden form to validate users, we will now use cheerio to extarct them
+                var obj = getHiddenForm(frame.body);
+                obj.ICAction = 'DERIVED_SSS_SCR_SSS_LINK_ANCHOR5';
+                return myucscRequest(ua, cookie, 'https://ais-cs.ucsc.edu/psc/csprd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL', obj, 'https://ais-cs.ucsc.edu/psc/csprd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL?FolderPath=PORTAL_ROOT_OBJECT.SCEP_MY_STUDENT_CENTER.SCEP_STUDENT_CENTER&IsFolder=false&IgnoreParamTempl=FolderPath%2cIsFolder&PortalActualURL=https%3a%2f%2fais-cs.ucsc.edu%2fpsc%2fcsprd%2fEMPLOYEE%2fPSFT_CSPRD%2fc%2fSA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL&PortalContentURL=https%3a%2f%2fais-cs.ucsc.edu%2fpsc%2fcsprd%2fEMPLOYEE%2fPSFT_CSPRD%2fc%2fSA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL&PortalContentProvider=PSFT_CSPRD&PortalCRefLabel=My%20Student%20Center%20Page&PortalRegistryName=EMPLOYEE&PortalServletURI=https%3a%2f%2fmy.ucsc.edu%2fpsp%2fep9prd%2f&PortalURI=https%3a%2f%2fmy.ucsc.edu%2fpsc%2fep9prd%2f&PortalHostNode=EMPL&NoCrumbs=yes&PortalKeyStruct=yes')
+            })
+            .then(function(redirect) {
+                return myucscRequest(ua, cookie, redirect.headers.location, null, 'https://ais-cs.ucsc.edu/psc/csprd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL?FolderPath=PORTAL_ROOT_OBJECT.SCEP_MY_STUDENT_CENTER.SCEP_STUDENT_CENTER&IsFolder=false&IgnoreParamTempl=FolderPath%2cIsFolder&PortalActualURL=https%3a%2f%2fais-cs.ucsc.edu%2fpsc%2fcsprd%2fEMPLOYEE%2fPSFT_CSPRD%2fc%2fSA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL&PortalContentURL=https%3a%2f%2fais-cs.ucsc.edu%2fpsc%2fcsprd%2fEMPLOYEE%2fPSFT_CSPRD%2fc%2fSA_LEARNER_SERVICES.SSS_STUDENT_CENTER.GBL&PortalContentProvider=PSFT_CSPRD&PortalCRefLabel=My%20Student%20Center%20Page&PortalRegistryName=EMPLOYEE&PortalServletURI=https%3a%2f%2fmy.ucsc.edu%2fpsp%2fep9prd%2f&PortalURI=https%3a%2f%2fmy.ucsc.edu%2fpsc%2fep9prd%2f&PortalHostNode=EMPL&NoCrumbs=yes&PortalKeyStruct=yes')
+            })
+            .then(function(myAcad) {
+                var obj = getHiddenForm(myAcad.body);
+                // Now "click" the unofficial transcript
+                obj.ICAction = 'DERIVED_SSSACA2_SS_UNOFF_TRSC_LINK';
+                obj['DERIVED_SSTSNAV_SSTS_MAIN_GOTO$7$'] = 9999;
+                obj['DERIVED_SSTSNAV_SSTS_MAIN_GOTO$8$'] = 9999;
+                obj.ptus_defaultlocalnode = 'PSFT_CSPRD';
+                obj.ptus_dbname = 'CSPRD';
+                obj.ptus_portal = 'EMPLOYEE';
+                obj.ptus_node = 'PSFT_CSPRD';
+                obj.ptus_workcenterid = '';
+                obj.ptus_componenturl = 'https://ais-cs.ucsc.edu/psp/csprd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_MY_ACAD.GBL';
+                return myucscRequest(ua, cookie, 'https://ais-cs.ucsc.edu/psc/csprd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_MY_ACAD.GBL', obj, 'https://ais-cs.ucsc.edu/psc/csprd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_MY_ACAD.GBL?Page=SSS_MY_ACAD&Action=U&ExactKeys=Y&TargetFrameName=None')
+            })
+            .then(function(redirect) {
+                var refererUnique = redirect.headers.location;
+                return myucscRequest(ua, cookie, refererUnique, null, 'https://ais-cs.ucsc.edu/psc/csprd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_MY_ACAD.GBL?Page=SSS_MY_ACAD&Action=U&ExactKeys=Y&TargetFrameName=None')
+                .then(function(transcriptPage) {
+                    var obj = getHiddenForm(transcriptPage.body);
+                    // Now "select" HTML
+                    obj.ICAJAX = 1;
+                    obj.ICNAVTYPEDROPDOWN = 1;
+                    obj.ICAction = 'DERIVED_SSTSRPT_TSCRPT_TYPE3';
+                    obj['DERIVED_SSTSNAV_SSTS_MAIN_GOTO$7$'] = 9999;
+                    obj.SA_REQUEST_HDR_INSTITUTION = 'UCSCM';
+                    obj.DERIVED_SSTSRPT_TSCRPT_TYPE3 = 'UHTML';
+                    obj['DERIVED_SSTSNAV_SSTS_MAIN_GOTO$8$'] = 9999;
+                    obj.ptus_defaultlocalnode = 'PSFT_CSPRD';
+                    obj.ptus_dbname = 'CSPRD';
+                    obj.ptus_portal = 'EMPLOYEE';
+                    obj.ptus_node = 'PSFT_CSPRD';
+                    obj.ptus_workcenterid = '';
+                    obj.ptus_componenturl = 'https://ais-cs.ucsc.edu/psp/csprd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_TSRQST_UNOFF.GBL';
+                    return myucscRequest(ua, cookie, 'https://ais-cs.ucsc.edu/psc/csprd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_TSRQST_UNOFF.GBL', obj, refererUnique)
+                    .then(function(transcriptPage2) {
+                        obj.ICStateNum = obj.ICStateNum++;
+                        obj.ICAction = 'GO';
+                        console.log('Requested for transcript...')
+                        return myucscRequest(ua, cookie, 'https://ais-cs.ucsc.edu/psc/csprd/EMPLOYEE/PSFT_CSPRD/c/SA_LEARNER_SERVICES.SSS_TSRQST_UNOFF.GBL', obj, refererUnique)
+                    })
+                    .then(function(end) {
+                        var CDATA = end.body.match(/<!\[CDATA\[(.*)]]>/);
+                        if (!CDATA || !CDATA[1] || CDATA[1].indexOf('window.open') === -1) {
+                            console.error('No window.open() Found')
+                            return false;
+                        }
+                        var args = /\(\s*([^)]+?)\s*\)/.exec(CDATA[1]);
+                        if (!args[1]) {
+                            console.error('Parse Error')
+                            return false;
+                        }
+                        args = args[1].split(/\s*,\s*/);
+                        var transcriptURL = args[0]
+                        transcriptURL = transcriptURL.substring(1, transcriptURL.length - 1);
+                        return myucscRequest(ua, cookie, transcriptURL, null, refererUnique)
+                    })
+                    .then(function(transcript) {
+                        return transcript.body;
+                    })
+                })
+            })
+        })
+    })
+}
+
 module.exports = {
     getSubjects: getSubjects,
     getTerms: getTerms,
@@ -1269,5 +1414,6 @@ module.exports = {
     getMaps: getMaps,
     test: testReq,
     calculateTermName: calculateTermName,
-    calculateNextTermCode: calculateNextTermCode
+    calculateNextTermCode: calculateNextTermCode,
+    getTranscriptHTML: getTranscriptHTML
 }
