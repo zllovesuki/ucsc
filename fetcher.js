@@ -202,6 +202,7 @@ var self = module.exports = {
                             if (course.num) {
                                 course.c = subject + ' ' + course.c;
                                 //course.lo = course.loc;
+                                course.c = course.c.split(/(\d+)/).map(function(el) { return el.replace(/\s+/g, ''); }).join(' ')
                                 course.n = course.n;
                                 course.f = course.ins.f;
                                 course.la = course.ins.l;
