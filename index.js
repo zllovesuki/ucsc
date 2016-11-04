@@ -1385,9 +1385,9 @@ var getTranscriptHTML = function(username, password) {
                         var transcriptURL = args[0]
                         transcriptURL = transcriptURL.substring(1, transcriptURL.length - 1);
                         return myucscRequest(ua, cookie, transcriptURL, null, refererUnique)
-                    })
-                    .then(function(transcript) {
-                        return transcript.body;
+                        .then(function(transcript) {
+                            return transcript.body;
+                        })
                     })
                 })
             })
