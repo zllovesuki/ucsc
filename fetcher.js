@@ -359,7 +359,6 @@ var self = module.exports = {
                     Object.keys(courses).forEach(function(subject) {
                         courses[subject].forEach(function(course) {
                             if (!(course.ins.f && course.ins.l)) {
-                                console.log('No ins name found, skipping...')
                                 return;
                             }
                             self.instructors.push({
