@@ -353,7 +353,7 @@ var self = module.exports = {
     instructors: [],
     mapping: {},
     saveRateMyProfessorsMappings: function(s3ReadHandler) {
-        return s3ReadHandler('/terms.json').spread(function(json) {
+        return s3ReadHandler('/terms.json').then(function(json) {
             return Promise.map(json, function(term) {
                 return s3ReadHandler('/terms/' + term.code + '.json').then(function(courses) {
                     Object.keys(courses).forEach(function(subject) {
