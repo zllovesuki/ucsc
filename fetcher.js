@@ -426,7 +426,7 @@ var self = module.exports = {
                                 console.log('match')
                             }else{
                                 fuzzy = FuzzySet([self.strip(ins.f)]).get(self.strip(self.getFirstName(l.name)));
-                                if (self.strip(self.getLastName(l.name)) == self.strip(ins.l) && fuzzy !== null && fuzz[0][0] > 0.5) {
+                                if (self.strip(self.getLastName(l.name)) == self.strip(ins.l) && fuzzy !== null && fuzzy[0][0] > 0.5) {
                                     self.mapping[ins.f + ins.l] = l.tid;
                                     console.log('similarity: confident')
                                 }else{
