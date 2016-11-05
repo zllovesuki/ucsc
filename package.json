@@ -1,6 +1,6 @@
 {
   "name": "ucsc",
-  "version": "3.12.2",
+  "version": "4.0.0",
   "description": "",
   "main": "index.js",
   "dependencies": {

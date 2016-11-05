@@ -402,7 +402,7 @@ var getGEDescRawDom = function() {
 }
 
 var searchOnRateMyProfessorRawDom = function(firstName, lastName) {
-    return anonRequest('http://www.ratemyprofessors.com/search.jsp?query=' + encodeURIComponent([firstName, lastName, 'Santa', 'Cruz'].join(' ')));
+    return anonRequest('http://www.ratemyprofessors.com/search.jsp?query=' + encodeURIComponent([firstName, lastName].join(' ')));
 }
 
 var fetchRateMyProfessorRawDom = function(tid) {
@@ -442,16 +442,24 @@ var getInfoFromSelector = function(body) {
     var listingDom = $('ul.listings');
     if (listingDom.length === 0) return null;
     // TODO: stop being so ugly
-    var name = listingDom[0].children[3].children[1].children[3].children[1].children[0].data.trim();
-    var school = listingDom[0].children[3].children[1].children[3].children[3].children[0].data.trim();
-
-    if (school.toLowerCase().indexOf('santa cruz') === -1) return null;
-
-    var href = listingDom[0].children[3].children[1].attribs.href;
-    return {
-        name: name,
-        tid: href.substring(href.lastIndexOf('=') + 1)
+    var listings = [];
+    var obj = {};
+    for (var i = 0, dom = listingDom[0].children, length = dom.length; i < length; i++) {
+        if (dom[i].attribs && dom[i].attribs.class.indexOf('PROFESSOR') !== -1) {
+            obj = {
+                name: dom[i].children[1].children[3].children[1].children[0].data.trim(),
+                school: dom[i].children[1].children[3].children[3].children[0].data.trim(),
+                tid: dom[i].children[1].attribs.href.substring(dom[i].children[1].attribs.href.lastIndexOf('=') + 1)
+            };
+            if (obj.school.toLowerCase().indexOf('santa cruz') !== -1) {
+                listings.unshift(obj);
+            }else{
+                listings.push(obj);
+            }
+        }
     }
+    if (listings.length === 0) return null;
+    return listings;
 }
 
 var parseRateMyProfessorFromSelector = function(body) {
@@ -512,85 +520,12 @@ var getObjByLastName = function(lastName) {
     })
 }
 
-
-var getRateMyProfessorScoresByFullName = function(firstName, lastName) {
-    var fetch = function(obj) {
-        return fetchRateMyProfessorRawDom(obj.tid).then(function(body) {
-            return {
-                name: obj.name,
-                tid: obj.tid,
-                scores: parseRateMyProfessorFromSelector(body)
-            }
-        })
-    }
-    return getObjByFullName(firstName, lastName).then(function(obj) {
-        if (obj === null) {
-            return null;
-        }
-        return fetch(obj);
-    })
-}
-
-var getRateMyProfessorScoresByLastName = function(firstName, lastName) {
-    var fetch = function(obj) {
-        return fetchRateMyProfessorRawDom(obj.tid).then(function(body) {
-            return {
-                name: obj.name,
-                tid: obj.tid,
-                scores: parseRateMyProfessorFromSelector(body)
-            }
-        })
-    }
-    return getObjByLastName(firstName, lastName).then(function(obj) {
-        if (obj === null) {
-            return null;
-        }
-        return fetch(obj);
-    })
-}
-
 var getRateMyProfessorScoresByTid = function(tid) {
     return fetchRateMyProfessorRawDom(tid).then(function(body) {
         return {
             tid: tid,
             scores: parseRateMyProfessorFromSelector(body)
         }
-    })
-}
-
-var getRateMyProfessorRatingsByFullName = function(firstName, lastName) {
-    var fetch = function(obj) {
-        return fetchRateMyProfessorJSONAll(obj.tid).then(function(ratings) {
-            return {
-                name: obj.name,
-                tid: obj.tid,
-                ratings: ratings
-            }
-        })
-    }
-    return getObjByFullName(firstName, lastName).then(function(obj) {
-        if (obj === null) {
-            return null;
-        }
-        return fetch(obj);
-    })
-}
-
-var getRateMyProfessorRatingsByLastName = function(lastName) {
-    var fetch = function(obj) {
-        return fetchRateMyProfessorJSONAll(obj.tid).then(function(ratings) {
-            return {
-                name: obj.name,
-                tid: obj.tid,
-                ratings: ratings
-            }
-        })
-    }
-    return getObjByLastName(lastName).then(function(obj) {
-        if (obj === null) {
-            return null;
-        }
-        return fetch(obj);
     })
 }
 
@@ -1512,11 +1447,7 @@ module.exports = {
     getGEDesc: getGEDesc,
     getObjByLastName: getObjByLastName,
     getObjByFullName: getObjByFullName,
-    getRateMyProfessorScoresByFullName: getRateMyProfessorScoresByFullName,
-    getRateMyProfessorScoresByLastName: getRateMyProfessorScoresByLastName,
     getRateMyProfessorScoresByTid: getRateMyProfessorScoresByTid,
-    getRateMyProfessorRatingsByFullName: getRateMyProfessorRatingsByFullName,
-    getRateMyProfessorRatingsByLastName: getRateMyProfessorRatingsByLastName,
     getRateMyProfessorRatingsByTid: getRateMyProfessorRatingsByTid,
     getMaps: getMaps,
     test: testReq,
