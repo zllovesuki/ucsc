@@ -397,7 +397,7 @@ var self = module.exports = {
                             console.log('perfect')
                         }else if (l !== null) {
                             if (l.name.slice(0, l.name.indexOf(', ')).replace(/\s+/, "").replace(/-/g, "") == ins.l.replace(/\s+/, "").replace(/-/g, "")
-                            && l.name.slice(l.name.indexOf(', ') + 2, l.name.indexOf(', ') + 3) == ins.f.slice(0, 1)) {
+                            && l.name.slice(l.name.indexOf(', ') + 2, l.name.indexOf(', ') + 5).toLowerCase() == ins.f.slice(0, 3).toLowerCase()) {
                                 self.mapping[ins.f + ins.l] = l.tid;
                                 console.log('match')
                             }else{
