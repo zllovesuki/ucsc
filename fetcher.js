@@ -352,6 +352,18 @@ var self = module.exports = {
 
     instructors: [],
     mapping: {},
+    strip: function(string) {
+        return string.replace(/\s+/g, "").replace(/-/g, "").replace(/\./g, "");
+    },
+    getLastName: function(string) {
+        return string.slice(0, string.indexOf(', '))
+    },
+    getFirstName: function(string) {
+        return string.slice(string.indexOf(', ') + 2);
+    },
+    getCapsInFirstName: function(string) {
+        return string.replace(/[a-z]/g, '')
+    },
     saveRateMyProfessorsMappings: function(s3ReadHandler) {
         return s3ReadHandler('/terms.json').then(function(json) {
             return Promise.map(json, function(term) {
@@ -380,9 +392,9 @@ var self = module.exports = {
                 return Promise.map(self.instructors, function(ins) {
                     return Promise.all([
                         ucsc.getObjByLastName(ins.l),
-                        ucsc.getObjByLastName(ins.l.replace(/\s+/, "").replace(/-/g, "")),
+                        ucsc.getObjByLastName(ins.l.replace(/\s+/g, "").replace(/-/g, "")),
                         ucsc.getObjByFullName(ins.f, ins.l),
-                        ucsc.getObjByFullName(ins.f, ins.l.replace(/\s+/, "").replace(/-/g, ""))
+                        ucsc.getObjByFullName(ins.f, ins.l.replace(/\s+/g, "").replace(/-/g, ""))
                     ]).spread(function(l, nl, fl, fnl) {
                         if (l === null && nl !== null) {
                             // sub striped last name
@@ -396,8 +408,18 @@ var self = module.exports = {
                             self.mapping[ins.f + ins.l] = fl.tid;
                             console.log('perfect')
                         }else if (l !== null) {
-                            if (l.name.slice(0, l.name.indexOf(', ')).replace(/\s+/, "").replace(/-/g, "") == ins.l.replace(/\s+/, "").replace(/-/g, "")
-                            && l.name.slice(l.name.indexOf(', ') + 2, l.name.indexOf(', ') + 5).toLowerCase() == ins.f.slice(0, 3).toLowerCase()) {
+                            // make sure that the last name is the same
+                            if (self.strip(self.getLastName(l.name)) == self.strip(ins.l)
+                                && (
+                                    // either the first three characters of the first name are the same
+                                    self.strip(self.getFirstName(l.name)).slice(0, 3).toLowerCase() == self.strip(ins.f).slice(0, 3).toLowerCase()
+                                    || (
+                                        // or the CAPS are the same
+                                        self.strip(self.getCapsInFirstName(ins.f)).length > 1
+                                        && self.strip(self.getCapsInFirstName(self.getFirstName(l.name))) == self.strip(self.getCapsInFirstName(ins.f))
+                                    )
+                                )
+                            ) {
                                 self.mapping[ins.f + ins.l] = l.tid;
                                 console.log('match')
                             }else{
@@ -414,9 +436,9 @@ var self = module.exports = {
                             console.log('good..?')
                         }
                         console.log('First Last: ' + ins.l + ', ' + ins.f, fl);
-                        console.log('F Lstrip:   ' + ins.l.replace(/\s+/, "").replace(/-/g, "") + ', ' + ins.f, fnl);
+                        console.log('F Lstrip:   ' + ins.l.replace(/\s+/g, "").replace(/-/g, "") + ', ' + ins.f, fnl);
                         console.log('Last:       ' + ins.l, l);
-                        console.log('Last strip: ' + ins.l.replace(/\s+/, "").replace(/-/g, ""), l);
+                        console.log('Last strip: ' + ins.l.replace(/\s+/g, "").replace(/-/g, ""), l);
                         console.log('---')
                         console.log('')
                     })
