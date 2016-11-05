@@ -1,6 +1,6 @@
 var ucsc = require('./index');
 var Promise = require('bluebird');
-var stringSimilarity = require('string-similarity');
+var FuzzySet = require('fuzzyset.js');
 var elasticlunr = require('elasticlunr');
 var fs = require('fs');
 
@@ -389,6 +389,8 @@ var self = module.exports = {
                     }) === i;
                 });
 
+                var fuzzy = null;
+
                 return Promise.map(self.instructors, function(ins) {
                     return Promise.all([
                         ucsc.getObjByLastName(ins.l),
@@ -423,8 +425,8 @@ var self = module.exports = {
                                 self.mapping[ins.f + ins.l] = l.tid;
                                 console.log('match')
                             }else{
-                                if (self.strip(self.getLastName(l.name)) == self.strip(ins.l)
-                                && stringSimilarity.compareTwoStrings(self.strip(ins.f), self.strip(self.getFirstName(l.name))) > 0.8) {
+                                fuzzy = FuzzySet([self.strip(ins.f)]).get(self.strip(self.getFirstName(l.name)));
+                                if (self.strip(self.getLastName(l.name)) == self.strip(ins.l) && fuzzy !== null && fuzz[0][0] > 0.75) {
                                     self.mapping[ins.f + ins.l] = l.tid;
                                     console.log('similarity: confident')
                                 }else{
