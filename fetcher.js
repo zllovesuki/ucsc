@@ -350,103 +350,78 @@ var self = module.exports = {
         })
     },
 
-    rmp: {},
+    instructors: [],
     mapping: {},
     saveRateMyProfessorsMappings: function(s3ReadHandler) {
-        return Promise.all([
-            s3ReadHandler('/terms.json'),
-            self.read('./tidManualMappings.json')
-        ]).spread(function(json, manual) {
+        return s3ReadHandler('/terms.json').spread(function(json) {
             return Promise.map(json, function(term) {
                 return s3ReadHandler('/terms/' + term.code + '.json').then(function(courses) {
-                    return Promise.map(Object.keys(courses), function(subject) {
-                        return Promise.map(courses[subject], function(course) {
+                    Object.keys(courses).forEach(function(subject) {
+                        courses[subject].forEach(function(course) {
                             if (!(course.ins.f && course.ins.l)) {
                                 console.log('No ins name found, skipping...')
                                 return;
                             }
-                            if (typeof self.rmp[course.ins.f + course.ins.l] !== 'undefined') return;
-                            self.rmp[course.ins.f + course.ins.l] = true;
-                            var fetch = function() {
-                                console.log('Trying alternative methods for', course.ins.f, course.ins.l, 'since ratings are not found on RMP based on last name');
-                                var lastNameVariation = function(lastName) {
-                                    var index;
-                                    // Fehren-Schmitz
-                                    if ( (index = lastName.indexOf('-')) !== -1) {
-                                        return lastName.substring(index + 1);
-                                    }
-                                    // Martinez Leal
-                                    if ( (index = lastName.indexOf(' ')) !== -1) {
-                                        return lastName.substring(index + 1);
-                                    }
-                                    return null;
-                                }
-                                return Promise.all([
-                                    // try again with last name variation
-                                    ucsc.getObjByLastName(lastNameVariation(course.ins.l)),
-                                    // try again with "display name"
-                                    ucsc.getObjByLastName(course.ins.d[0]),
-                                    // try again with first + last
-                                    ucsc.getObjByFullName(course.ins.f, course.ins.l)
-                                ]).spread(function(objA, objB, objC) {
-                                    if (lastNameVariation(course.ins.l) !== null && objA !== null) {
-                                        // We are not going to check first name similarity again, because we are confident that the variation is very rare
-                                        console.log('Found a good match based on last name variation', lastNameVariation(course.ins.l), ':', course.ins.l);
-                                        return objA
-                                    }else if (objB !== null) {
-                                        console.log('Found a good match based on display name', course.ins.d[0]);
-                                        return objB
-                                    }else if (objC !== null) {
-                                        console.log('Found a good match based on full name', course.ins.f, course.ins.l);
-                                        return objC
-                                    }else{
-                                        console.log('Ratings for', course.ins.f, course.ins.l, 'not found on RMP based on last name and full name, not even display name');
-                                        return null;
-                                    }
-                                })
-                                .then(function(obj) {
-                                    if (obj === null) return;
-                                    console.log('Saving tid', 'for', course.ins.f, course.ins.l, obj.tid);
-                                    self.mapping[course.ins.f + course.ins.l] = obj.tid;
-                                })
-                            }
-                            var fetchScores = function() {
-                                var manualList = self.intersect(course.ins.d, Object.keys(manual));
-                                if (manualList.length > 0) {
-                                    console.log('Using manual overrides for', course.ins.f, course.ins.l, 'with', manual[manualList[0]]);
-                                    self.mapping[course.ins.f + course.ins.l] = manual[manualList[0]];
-                                    return;
-                                }
-                                return ucsc.getObjByLastName(course.ins.l).then(function(obj) {
-                                    console.log('Search by last name', course.ins.l);
-                                    if (obj !== null) {
-                                        var resultLastName = obj.name.substring(0, obj.name.indexOf(',')).toLowerCase();
-                                        var resultFirstname = obj.name.substring(obj.name.indexOf(',') + 2).toLowerCase();
-                                        if (course.ins.l.toLowerCase() == resultLastName
-                                        && stringSimilarity.compareTwoStrings(course.ins.f.toLowerCase(), resultFirstname) > 0.5) {
-                                            // we shall call it a match
-                                            console.log('Found a good match based on last name', course.ins.l, 'Results', resultFirstname, resultLastName, ';', 'Current', course.ins.f, course.ins.l);
-                                            console.log('Saving tid', 'for', course.ins.f, course.ins.l, obj.tid);
-                                            self.mapping[course.ins.f + course.ins.l] = obj.tid;
-                                        }else{
-                                            return fetch();
-                                        }
-                                    }else{
-                                        //console.log('Ratings for', course.ins.f, course.ins.l, 'not found on RMP based on last name');
-                                        return fetch();
-                                    }
-                                })
-                                .catch(function(e) {
-                                    console.log('Retrying', course.ins.f, course.ins.l)
-                                    console.error(e);
-                                    return fetchScores();
-                                })
-                            }
-                            return fetchScores();
-                        }, { concurrency: 10 })
-                    }, { concurrency: 2 })
+                            self.instructors.push({
+                                d: course.ins.d.filter(function(el) { return el.indexOf(course.ins.l) !== -1 })[0],
+                                f: course.ins.f,
+                                l: course.ins.l
+                            })
+                        })
+                    })
                 })
             }, { concurrency: 1 })
+            .then(function() {
+                self.instructors = self.instructors.filter(function (o, i, s) {
+                    return s.findIndex(function (t) {
+                        return t.l === o.l && t.f === o.f;
+                    }) === i;
+                });
+
+                return Promise.map(self.instructors, function(ins) {
+                    return Promise.all([
+                        ucsc.getObjByLastName(ins.l),
+                        ucsc.getObjByLastName(ins.l.replace(/\s+/, "").replace(/-/g, "")),
+                        ucsc.getObjByFullName(ins.f, ins.l),
+                        ucsc.getObjByFullName(ins.f, ins.l.replace(/\s+/, "").replace(/-/g, ""))
+                    ]).spread(function(l, nl, fl, fnl) {
+                        if (l === null && nl !== null) {
+                            // sub striped last name
+                            l = nl;
+                        }
+                        if (fl === null && fnl !== null) {
+                            // sub striped full name
+                            fl = fnl;
+                        }
+                        if (fl !== null) {
+                            self.mapping[ins.f + ins.l] = fl.tid;
+                            console.log('perfect')
+                        }else if (l !== null) {
+                            if (l.name.slice(l.name.indexOf(', ') + 2, l.name.indexOf(', ') + 3) == ins.f.slice(0, 1)) {
+                                self.mapping[ins.f + ins.l] = l.tid;
+                                console.log('match')
+                            }else{
+                                if (stringSimilarity.compareTwoStrings(ins.l + ', ' + ins.f, l.name) > 0.75) {
+                                    self.mapping[ins.f + ins.l] = l.tid;
+                                    console.log('similarity: confident')
+                                }else{
+                                    console.log('similarity: unsatisfactory')
+                                }
+                            }
+                        }else if (l === null && nl === null && d === null && fl === null) {
+                            console.log('empty')
+                        }else{
+                            console.log('good..?')
+                        }
+                        console.log('First Last: ' + ins.l + ', ' + ins.f, fl);
+                        console.log('F Lstrip:   ' + ins.l.replace(/\s+/, "").replace(/-/g, "") + ', ' + ins.f, fnl);
+                        console.log('Last:       ' + ins.l, l);
+                        console.log('Last strip: ' + ins.l.replace(/\s+/, "").replace(/-/g, ""), l);
+                        console.log('---')
+                        console.log('')
+                    })
+                }, { concurrency: 1 })
+            })
             .then(function() {
                 console.log('Saving mappings')
                 return self.write('./db/rmp.json', self.mapping)
