@@ -407,7 +407,7 @@ var self = module.exports = {
                                     console.log('similarity: unsatisfactory')
                                 }
                             }
-                        }else if (l === null && nl === null && d === null && fl === null) {
+                        }else if (l === null && nl === null && fl === null) {
                             console.log('empty')
                         }else{
                             console.log('good..?')
