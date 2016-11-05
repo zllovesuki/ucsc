@@ -423,7 +423,8 @@ var self = module.exports = {
                                 self.mapping[ins.f + ins.l] = l.tid;
                                 console.log('match')
                             }else{
-                                if (stringSimilarity.compareTwoStrings(ins.l + ', ' + ins.f, l.name) > 0.8) {
+                                if (self.strip(self.getLastName(l.name)) == self.strip(ins.l)
+                                && stringSimilarity.compareTwoStrings(self.strip(ins.f), self.strip(self.getFirstName(l.name))) > 0.8) {
                                     self.mapping[ins.f + ins.l] = l.tid;
                                     console.log('similarity: confident')
                                 }else{
