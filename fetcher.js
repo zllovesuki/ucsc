@@ -396,7 +396,7 @@ var self = module.exports = {
                             self.mapping[ins.f + ins.l] = fl.tid;
                             console.log('perfect')
                         }else if (l !== null) {
-                            if (l.name.slice(l.name.indexOf(', ') + 2, l.name.indexOf(', ') + 3) == ins.f.slice(0, 1)) {
+                            if (l.name.slice(0, l.name.indexOf(', ')) == ins.l && l.name.slice(l.name.indexOf(', ') + 2, l.name.indexOf(', ') + 3) == ins.f.slice(0, 1)) {
                                 self.mapping[ins.f + ins.l] = l.tid;
                                 console.log('match')
                             }else{
