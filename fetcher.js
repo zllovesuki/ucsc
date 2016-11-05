@@ -391,6 +391,9 @@ var self = module.exports = {
 
                 var fuzzy = null;
 
+                var derOneL = null;
+                var derOneFL = null;
+
                 return Promise.map(self.instructors, function(ins) {
                     return Promise.all([
                         ucsc.getObjByLastName(ins.l),
@@ -398,6 +401,7 @@ var self = module.exports = {
                         ucsc.getObjByFullName(ins.f, ins.l),
                         ucsc.getObjByFullName(ins.f, ins.l.replace(/\s+/g, "").replace(/-/g, ""))
                     ]).spread(function(l, nl, fl, fnl) {
+                        console.log(ins.l + ', ' + ins.f + ':')
                         if (l === null && nl !== null) {
                             // sub striped last name
                             l = nl;
@@ -407,43 +411,56 @@ var self = module.exports = {
                             fl = fnl;
                         }
                         if (fl !== null) {
-                            self.mapping[ins.f + ins.l] = fl.tid;
-                            console.log('perfect')
+                            // fl[0]
+                            for (var i = 0, length = fl.length; i < length; i++) {
+                                // It's better than we don't match than matching the wrong person
+                                if (fl[i].school.toLowerCase().indexOf('santa cruz') === -1) continue;
+                                derOneFL = i;
+                            }
+                            if (derOneFL !== null) {
+                                self.mapping[ins.f + ins.l] = fl[derOneFL].tid;
+                                console.log('perfect')
+                            }
                         }else if (l !== null) {
-                            // make sure that the last name is the same
-                            if (self.strip(self.getLastName(l.name)) == self.strip(ins.l)
-                                && (
-                                    // either the first three characters of the first name are the same
-                                    self.strip(self.getFirstName(l.name)).slice(0, 3).toLowerCase() == self.strip(ins.f).slice(0, 3).toLowerCase()
-                                    || (
-                                        // or the CAPS are the same
-                                        self.strip(self.getCapsInFirstName(ins.f)).length > 1
-                                        && self.strip(self.getCapsInFirstName(self.getFirstName(l.name))) == self.strip(self.getCapsInFirstName(ins.f))
+                            for (var i = 0, length = l.length; i < length; i++) {
+                                // It's better than we don't match than matching the wrong person
+                                if (l[i].school.toLowerCase().indexOf('santa cruz') === -1) continue;
+
+                                // make sure that the last name is the same
+                                if (self.strip(self.getLastName(l[i].name)) == self.strip(ins.l)
+                                    && (
+                                        // either the first three characters of the first name are the same
+                                        self.strip(self.getFirstName(l[i].name)).slice(0, 3).toLowerCase() == self.strip(ins.f).slice(0, 3).toLowerCase()
+                                        || (
+                                            // or the CAPS are the same
+                                            self.strip(self.getCapsInFirstName(ins.f)).length > 1
+                                            && self.strip(self.getCapsInFirstName(self.getFirstName(l[i].name))) == self.strip(self.getCapsInFirstName(ins.f))
+                                        )
                                     )
-                                )
-                            ) {
-                                self.mapping[ins.f + ins.l] = l.tid;
-                                console.log('match')
-                            }else{
-                                fuzzy = FuzzySet([self.strip(ins.f)]).get(self.strip(self.getFirstName(l.name)));
-                                if (self.strip(self.getLastName(l.name)) == self.strip(ins.l) && fuzzy !== null && fuzzy[0][0] > 0.5) {
-                                    self.mapping[ins.f + ins.l] = l.tid;
-                                    console.log('similarity: confident')
+                                ) {
+                                    derOneL = i;
                                 }else{
-                                    console.log('similarity: unsatisfactory')
+                                    fuzzy = FuzzySet([self.strip(ins.f)]).get(self.strip(self.getFirstName(l[i].name)));
+                                    if (self.strip(self.getLastName(l[i].name)) == self.strip(ins.l) && fuzzy !== null && fuzzy[0][0] > 0.5) {
+                                        derOneL = i;
+                                    }
                                 }
                             }
-                        }else if (l === null && nl === null && fl === null) {
-                            console.log('empty')
-                        }else{
-                            console.log('good..?')
+                            if (derOneL !== null) {
+                                self.mapping[ins.f + ins.l] = l[derOneL].tid;
+                                console.log('match')
+                            }else{
+                                console.log('rejected')
+                            }
                         }
-                        console.log('First Last: ' + ins.l + ', ' + ins.f, fl);
-                        console.log('F Lstrip:   ' + ins.l.replace(/\s+/g, "").replace(/-/g, "") + ', ' + ins.f, fnl);
-                        console.log('Last:       ' + ins.l, l);
-                        console.log('Last strip: ' + ins.l.replace(/\s+/g, "").replace(/-/g, ""), l);
+                        if (derOneFL === null && derOneL === null) console.log('skipped')
+
+                        if (fl !== null && derOneFL !== null) console.log('First Last: ' + ins.l + ', ' + ins.f, fl[derOneFL]);
+                        if (l !== null && derOneL !== null) console.log('Last:       ' + ins.l, l[derOneL]);
                         console.log('---')
                         console.log('')
+                        derOneL = null;
+                        derOneFL = null;
                     })
                 }, { concurrency: 1 })
             })
