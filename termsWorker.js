@@ -69,6 +69,8 @@ var uploadOneTerm = function(code) {
         path.join(dbPath, 'timestamp', 'index', code + '.json'),
         path.join(dbPath, 'terms.json'),
         path.join(dbPath, 'timestamp', 'terms.json')
+        path.join(dbPath, 'major-minor.json'),
+        path.join(dbPath, 'timestamp', 'major-minor.json')
     ]
     return Promise.mapSeries(files, function(file) {
         return upload(file);
@@ -146,6 +148,7 @@ var checkForNewTerm = function() {
             })
             .then(job.buildIndex)
             .then(job.calculateTermsStats)
+            .then(job.saveMajorsMinors)
             .then(function() {
                 return uploadOneTerm(todoTerm)
             })
@@ -174,6 +177,7 @@ shouldStartFresh().then(function(weShould) {
         .then(job.saveGEDesc)
         .then(job.saveMaps)
         .then(job.saveSubjects)
+        .then(job.saveMajorsMinors)
         .then(uploadEverything)
         .then(dirtyGC)
     }else{

@@ -472,6 +472,16 @@ var self = module.exports = {
                 })
             })
         })
+    },
+
+    saveMajorsMinors: function() {
+        return ucsc.getMajorMinor().then(function(list) {
+            console.log('Saving list of majors/minors')
+            return self.write('./db/major-minor.json', list)
+            .then(function() {
+                return self.write('./db/timestamp/major-minor.json', Math.round(+new Date()/1000));
+            })
+        })
     }
 
 }
