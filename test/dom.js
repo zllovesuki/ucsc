@@ -80,14 +80,33 @@ describe('Map Coordinates DOM Parser', function() {
 
 describe('RateMyProfessors Stats DOM Parser', function() {
     it('Should obtains Yonatan Katznelson\'s RMP stats', function(done) {
-        ucsc.getRateMyProfessorScoresByFullName('Yonatan', 'Katznelson').then(function(rmp) {
+        ucsc.getObjByFullName('Yonatan', 'Katznelson').then(function(list) {
+            expect(list.length).to.be.above(0);
+            return ucsc.getRateMyProfessorScoresByTid(list[0].tid).then(function(rmp) {
+                try {
+                    // Sorry professor, but you are very spicy
+                    expect(rmp).to.have.property('scores');
+                    expect(rmp.scores).to.have.property('overall');
+                    expect(rmp.scores.overall).to.be.below(3);
+                    expect(rmp.scores).to.have.property('count');
+                    expect(rmp.scores.count).to.be.above(300);
+                    done();
+                }catch(e) {
+                    done(e);
+                }
+            })
+        })
+    })
+})
+
+describe('Major/Minors PDF Parser', function() {
+    it('Should obtains a list of majors and minors', function(done) {
+        ucsc.getMajorMinor().then(function(list) {
             try {
-                // Sorry professor, but you are very spicy
-                expect(rmp).to.have.property('scores');
-                expect(rmp.scores).to.have.property('overall');
-                expect(rmp.scores.overall).to.be.below(3);
-                expect(rmp.scores).to.have.property('count');
-                expect(rmp.scores.count).to.be.above(300);
+                expect(list).to.have.property('majors');
+                expect(list).to.have.property('minors');
+                list.majors.should.include({'Computer Science': ['BA', 'BS']})
+                list.minors.should.include('Mathematics')
                 done();
             }catch(e) {
                 done(e);
