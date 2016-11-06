@@ -1,6 +1,7 @@
+var fs = require('fs');
+var url = require('url');
 var Promise = require('bluebird');
 var cheerio = require('cheerio');
-var url = require('url');
 var unserialize = require('./lib/unserialize');
 var serialize = require('./lib/serialize');
 var Base64={_keyStr:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",encode:function(e){var t="";var n,r,i,s,o,u,a;var f=0;e=Base64._utf8_encode(e);while(f<e.length){n=e.charCodeAt(f++);r=e.charCodeAt(f++);i=e.charCodeAt(f++);s=n>>2;o=(n&3)<<4|r>>4;u=(r&15)<<2|i>>6;a=i&63;if(isNaN(r)){u=a=64}else if(isNaN(i)){a=64}t=t+this._keyStr.charAt(s)+this._keyStr.charAt(o)+this._keyStr.charAt(u)+this._keyStr.charAt(a)}return t},decode:function(e){var t="";var n,r,i;var s,o,u,a;var f=0;e=e.replace(/[^A-Za-z0-9+/=]/g,"");while(f<e.length){s=this._keyStr.indexOf(e.charAt(f++));o=this._keyStr.indexOf(e.charAt(f++));u=this._keyStr.indexOf(e.charAt(f++));a=this._keyStr.indexOf(e.charAt(f++));n=s<<2|o>>4;r=(o&15)<<4|u>>2;i=(u&3)<<6|a;t=t+String.fromCharCode(n);if(u!=64){t=t+String.fromCharCode(r)}if(a!=64){t=t+String.fromCharCode(i)}}t=Base64._utf8_decode(t);return t},_utf8_encode:function(e){e=e.replace(/rn/g,"n");var t="";for(var n=0;n<e.length;n++){var r=e.charCodeAt(n);if(r<128){t+=String.fromCharCode(r)}else if(r>127&&r<2048){t+=String.fromCharCode(r>>6|192);t+=String.fromCharCode(r&63|128)}else{t+=String.fromCharCode(r>>12|224);t+=String.fromCharCode(r>>6&63|128);t+=String.fromCharCode(r&63|128)}}return t},_utf8_decode:function(e){var t="";var n=0;var r=c1=c2=0;while(n<e.length){r=e.charCodeAt(n);if(r<128){t+=String.fromCharCode(r);n++}else if(r>191&&r<224){c2=e.charCodeAt(n+1);t+=String.fromCharCode((r&31)<<6|c2&63);n+=2}else{c2=e.charCodeAt(n+1);c3=e.charCodeAt(n+2);t+=String.fromCharCode((r&15)<<12|(c2&63)<<6|c3&63);n+=3}}return t}}
@@ -1174,6 +1175,121 @@ var parseMapsFromSelector = function(body) {
     return locations;
 }
 
+var downloadMajorMinor = function() {
+    return new Promise(function(resolve, reject) {
+        request
+        .get('http://advising.ucsc.edu/planning/your-major/declaration/docs/major-declaration.pdf')
+        .on('end', function() {
+            return resolve();
+        })
+        .on('error', function(err) {
+            return resolve(err);
+        })
+        .pipe(fs.createWriteStream('/tmp/major-minor.pdf'))
+    });
+}
+
+var pdf2HTML = function(filename) {
+    return new Promise(function(resolve, reject) {
+        var spawn = require('child_process').spawn;
+        var pdftohtml = spawn('pdftohtml', ['-stdout', filename]);
+        var html = '';
+        var error = '';
+        var errorOcc = false;
+        pdftohtml.stdout.on('data', function(data) {
+            html += data.toString('utf-8');
+        })
+
+        pdftohtml.stderr.on('data', function(data) {
+            errorOcc = true;
+            error += data.toString('utf-8')
+        })
+
+        pdftohtml.on('exit', function() {
+            if (errorOcc) reject(err);
+            else resolve(html);
+        })
+    });
+}
+
+var parseMajorMinor = function(html) {
+    var $ = cheerio.load(html);
+    var lines = $('br');
+    var major = false;
+    var minor = false;
+    var line = '';
+    var majors = [];
+    var majorCounter = 0;
+    var minors = [];
+    var minorCounter = 0;
+    var whatB = function(string) {
+        var obj = [];
+        if (string.replace(/\s+/g, "").indexOf('B.A.') !== -1) obj.push('BA')
+        if (string.replace(/\s+/g, "").indexOf('B.S.') !== -1) obj.push('BS')
+        if (string.replace(/\s+/g, "").indexOf('B.M.') !== -1) obj.push('BM')
+        return obj;
+    }
+    for (var i = 0, length = lines.length; i < length; i++) {
+        line = lines[i].prev.data;
+        if (lines[i].prev.children && lines[i].prev.children[0].data.indexOf('Undergraduate Majors') !== -1) {
+            major = true;
+            minor = false;
+        }else if (lines[i].prev.children && lines[i].prev.children[0].data.indexOf('Undergraduate Minors') !== -1) {
+            major = false;
+            minor = true;
+        }else if (line && line.indexOf('check those that apply') !== -1) {
+            major = false;
+            minor = false;
+        }
+        if (!line || (major === false && minor === false)) continue;
+        if (major) {
+            if (line.slice(1, 2), line.slice(1, 2) == '☐') {
+                // checkbox
+                majors[majorCounter] = line;
+            }else{
+                // probably broke off from new line
+                majors[majorCounter - 3] += line;
+            }
+            majorCounter++;
+        }else if (minor) {
+            if (line.slice(1, 2), line.slice(1, 2) == '☐') {
+                minors[minorCounter] = line;
+            }else{
+                minors[minorCounter - 4] += line;
+            }
+            minorCounter++;
+        }
+    }
+    majors = majors.filter(Boolean).map(function(el) {
+        return el.split(' ').map(function(seg) { return seg.replace(/\s+/g, " ")}).join(' ').slice(2)
+    }).map(function(el) {
+        var obj = {};
+        if (el.replace(/\s+/g, "").indexOf('☐') !== -1) {
+            obj[el.slice(0, el.indexOf('☐') - 1)] = whatB(el);
+        }else if (el.replace(/\s+/g, "").indexOf('B.A') !== -1) {
+            obj[el.slice(0, el.indexOf('B.A') - 1)] = whatB(el);
+        }else if (el.replace(/\s+/g, "").indexOf('B.S') !== -1) {
+            obj[el.slice(0, el.indexOf('B.S') - 1)] = whatB(el);
+        }
+        return obj;
+    })
+    minors = minors.filter(Boolean).map(function(el) {
+        return el.split(' ').map(function(seg) { return seg.replace(/\s+/g, " ")}).join(' ').slice(2)
+    })
+    return {
+        majors: majors,
+        minors: minors
+    }
+}
+
+var getMajorMinor = function() {
+    return downloadMajorMinor().then(function() {
+        return pdf2HTML('/tmp/major-minor.pdf').then(function(html) {
+            return parseMajorMinor(html);
+        })
+    })
+}
+
 var getMaps = function() {
     var locations = {};
     return Promise.map(Object.keys(maps), function(key) {
@@ -1455,5 +1571,6 @@ module.exports = {
     calculateNextTermCode: calculateNextTermCode,
     getTranscriptHTML: getTranscriptHTML,
     parseTranscriptHTML: parseTranscriptHTML,
-    getTranscript: getTranscript
+    getTranscript: getTranscript,
+    getMajorMinor: getMajorMinor
 }
