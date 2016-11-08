@@ -144,7 +144,6 @@ var checkForNewTerm = function() {
             .then(function() {
                 return job.saveCourseInfo(todoTerm)
             })
-            .then(job.buildIndex)
             .then(job.calculateTermsStats)
             .then(function() {
                 return uploadOneTerm(todoTerm)
@@ -169,7 +168,6 @@ shouldStartFresh().then(function(weShould) {
         // then uploading everything
         return job.saveTermsList()
         .then(job.saveCourseInfo)
-        .then(job.buildIndex)
         .then(job.calculateTermsStats)
         .then(job.saveGEDesc)
         .then(job.saveMaps)
