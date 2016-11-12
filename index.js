@@ -326,18 +326,14 @@ var getTerms = function() {
     return secureRequest('https://pisa.ucsc.edu/class_search/index.php')
     .then(function(body) {
         var $ = cheerio.load(body);
-        var terms = $('#term_dropdown')[0].children;
-
         var actualTerms = [];
 
-        for (var i = 0, length = terms.length; i < length; i++) {
-            if (terms[i].attribs && terms[i].children) {
-                actualTerms.push({
-                    code: terms[i].attribs.value,
-                    name: terms[i].children[0].data
-                });
-            }
-        }
+        $('#term_dropdown').find('option').each(function(i, elem) {
+            actualTerms.push({
+                code: $(this).attr('value'),
+                name: $(this).text()
+            });
+        })
         return actualTerms;
     })
 }
@@ -346,19 +342,14 @@ var getSubjects = function() {
     return secureRequest('https://pisa.ucsc.edu/class_search/index.php')
     .then(function(body) {
         var $ = cheerio.load(body);
-        var subjects = $('#subject')[0].children;
-
         var actualSubjects = [];
 
-        for (var i = 0, length = subjects.length; i < length; i++) {
-            if (subjects[i].attribs && subjects[i].children) {
-                if (subjects[i].attribs.value.length < 1) continue;
-                actualSubjects.push({
-                    code: subjects[i].attribs.value,
-                    name: subjects[i].children[0].data
-                });
-            }
-        }
+        $('#subject').find('option').each(function(i, elem) {
+            actualSubjects.push({
+                code: $(this).attr('value'),
+                name: $(this).text()
+            });
+        })
         return actualSubjects;
     })
 }
@@ -440,61 +431,56 @@ var fetchMapsRawDom = function(key) {
 
 var getInfoFromSelector = function(body) {
     var $ = cheerio.load(body);
-    var listingDom = $('ul.listings');
+
+    var listingDom = $('ul.listings').find($('li.listing'));
+
     if (listingDom.length === 0) return null;
-    // TODO: stop being so ugly
+
     var listings = [];
     var obj = {};
-    for (var i = 0, dom = listingDom[0].children, length = dom.length; i < length; i++) {
-        if (dom[i].attribs && dom[i].attribs.class.indexOf('PROFESSOR') !== -1) {
-            obj = {
-                name: dom[i].children[1].children[3].children[1].children[0].data.trim(),
-                school: dom[i].children[1].children[3].children[3].children[0].data.trim(),
-                tid: dom[i].children[1].attribs.href.substring(dom[i].children[1].attribs.href.lastIndexOf('=') + 1)
-            };
-            if (obj.school.toLowerCase().indexOf('santa cruz') !== -1) {
-                listings.unshift(obj);
-            }else{
-                listings.push(obj);
-            }
+
+    listingDom.each(function(i, elm) {
+        if ($(this).find($('.listing-cat')).text().trim() !== 'PROFESSOR') return;
+        obj = {
+            name: $(this).find($('.listing-name')).find($('.main')).text().trim(),
+            school: $(this).find($('.listing-name')).find($('.sub')).text().trim(),
+            tid: $(this).find('a').attr('href').slice($(this).find('a').attr('href').lastIndexOf('=') + 1)
         }
-    }
-    if (listings.length === 0) return null;
+        if (obj.school.toLowerCase().indexOf('santa cruz') !== -1) {
+            listings.unshift(obj);
+        }else{
+            listings.push(obj);
+        }
+    })
+
     return listings;
 }
 
 var parseRateMyProfessorFromSelector = function(body) {
     var $ = cheerio.load(body);
-    var scoreDom = $('.rating-breakdown')
+
     var rating = {};
 
-    var overallDom = $('.breakdown-container', scoreDom)
-    var breakDownDom = $('.breakdown-section', scoreDom)
-    try {
+    rating.overall = $('.breakdown-container').find($('.grade')).text().trim()
 
-        rating.overall = overallDom[0].children[1].children[1].children[0].data;
-        //console.log('WOULD TAKE AGAIN'.toLowerCase(), breakDownDom[0].children[1].children[0].data.trim());
-        rating.again = breakDownDom[0].children[1].children[0].data.trim();
-        //console.log('LEVEL OF DIFFICULTY'.toLowerCase(0), breakDownDom[1].children[1].children[0].data.trim());
-        rating.difficulty = breakDownDom[1].children[1].children[0].data.trim();
+    $('.breakdown-section').find($('.grade')).each(function(i, elm) {
+        if (i === 0) rating.again = $(this).text().trim();
+        else if (i === 1) rating.difficulty = $(this).text().trim();
+        else return;
+    })
 
-        rating.tags = [];
+    rating.tags = [];
+    var split = []
 
-        var tagsDom = $('.tag-box-choosetags');
-        for (var i = 0, length = tagsDom.length; i < length; i++) {
-            rating.tags.push({
-                tag: tagsDom[i].children[0].data.trim().toLowerCase(),
-                count: tagsDom[i].children[1].children[0].data.match(/\d+/g)[0]
-            })
-            //console.log(tagsDom[i].children[0].data.trim().toLowerCase(), ':', tagsDom[i].children[1].children[0].data.match(/\d+/g)[0]);
-        }
+    $('.tag-box').find($('.tag-box-choosetags')).each(function(i, elm) {
+        split = $(this).text().split('(')
+        rating.tags.push({
+            tag: split[0].trim(),
+            count: split[1].match(/\d+/g)[0]
+        })
+    })
 
-        var ratingCountDom = $('.rating-count');
-        //console.log(ratingCountDom[0].children[0].data.match(/\d+/g)[0]);
-        rating.count = ratingCountDom[0].children[0].data.match(/\d+/g)[0];
-    }catch(e) {
-
-    }
+    rating.count = $('.rating-count').text().trim().match(/\d+/g)[0];
 
     return rating;
 }
@@ -541,135 +527,61 @@ var getRateMyProfessorRatingsByTid = function(tid) {
 
 var parseGEDescDOMFromSelector = function(body) {
     var $ = cheerio.load(body);
-    var tableDom = $('tr', $('.contentBox'));
     var geDesc = {};
-    for (var i = 1, length = tableDom.length; i < length; i ++) {
-        // TODO: less ugly please
-        if (typeof tableDom[i].children[3] !== 'undefined' && typeof tableDom[i].children[3].children[1] !== 'undefined') {
-            if (typeof tableDom[i].children[3].children[1].children[2] !== 'undefined') {
-                geDesc[tableDom[i].children[3].children[1].children[2].children[0].data] = tableDom[i].children[1].children[1].children[0].data
-            }
-            geDesc[tableDom[i].children[3].children[1].children[0].children[0].data] = tableDom[i].children[1].children[1].children[0].data
-        }
-    }
+
+    var domRef;
+    var split = [];
+    $('.contentBox').find('tr').each(function(i, elm) {
+        if (i === 0) return;
+        domRef = $(this).children().first();
+        if (domRef.next().text().trim().length === 0) return;
+        split = domRef.next().text().trim().split('and');
+        split.forEach(function(text) {
+            geDesc[text.trim()] = domRef.text().trim();
+        })
+    })
     // http://registrar.ucsc.edu/navigator/section3/gened/beginning2010/gen-ed-codes/{code}-code.html
     return geDesc;
 }
 
-var parseEnrollmentDOMFromSelector = function(body) {
-    var $ = cheerio.load(body);
-    var bodyDom = $('.panel-group > .row > .panel-body');
-    var course = {};
-    // bodyDom[0] is the course information
-    var infoDom = $('.col-xs-12', bodyDom[0])
-    // infoDom[0] is the first column; infoDom[1] is the second column
-    var enrollDD = $('dd', infoDom[1]);
-    /*
-    // enrollDD[0] is the status; enrollDD[1] is available seats;
-    // enrollDD[2] is capacity; enrollDD[3] is enrolled;
-    // enrollDD[4] is waitlist capacity; enrollDD[5] is waitlist total
-    console.log(enrollDD[0].children[1].data);
-    console.log(enrollDD[1].children[0].data);
-    console.log(enrollDD[2].children[0].data);
-    console.log(enrollDD[3].children[0].data);
-    console.log(enrollDD[4].children[0].data);
-    console.log(enrollDD[5].children[0].data);
-    */
-    course.status = enrollDD[0].children[1].data.trim();
-    course.avail = parseInt(enrollDD[1].children[0].data);
-    course.cap = parseInt(enrollDD[2].children[0].data);
-    course.enrolled = parseInt(enrollDD[3].children[0].data);
-    course.waitcap = parseInt(enrollDD[4].children[0].data);
-    course.wait = parseInt(enrollDD[5].children[0].data);
-
-    return course;
-
-}
-
 var parseSeatsFromSelector = function(body) {
     var $ = cheerio.load(body);
-    var bodyDom = $('.panel-group > .row > .panel-body');
+
     var seats = {};
-    // bodyDom[0] is the course information
-    var infoDom = $('.col-xs-12', bodyDom[0])
-    // infoDom[0] is the first column; infoDom[1] is the second column
-    var enrollDD = $('dd', infoDom[1]);
 
-    /*
-    // enrollDD[0] is the status; enrollDD[1] is available seats;
-    // enrollDD[2] is capacity; enrollDD[3] is enrolled;
-    // enrollDD[4] is waitlist capacity; enrollDD[5] is waitlist total
-    console.log(enrollDD[0].children[1].data);
-    console.log(enrollDD[1].children[0].data);
-    console.log(enrollDD[2].children[0].data);
-    console.log(enrollDD[3].children[0].data);
-    console.log(enrollDD[4].children[0].data);
-    console.log(enrollDD[5].children[0].data);
-    */
-    if (!enrollDD && !enrollDD[1] && !enrollDD[1].children) return false;
-    seats.status = enrollDD[0].children[1].data.trim();
-    seats.avail = (enrollDD[1].children[0] ? parseInt(enrollDD[1].children[0].data) : null)
-    seats.cap = (enrollDD[2].children[0] ? parseInt(enrollDD[2].children[0].data) : null)
-    seats.enrolled = (enrollDD[3].children[0] ? parseInt(enrollDD[3].children[0].data) : null)
-    seats.waitCap = (enrollDD[4].children[0] ? parseInt(enrollDD[4].children[0].data) : null)
-    seats.waitTotal = (enrollDD[5].children[0] ? parseInt(enrollDD[5].children[0].data) : null)
+    var split = [];
+    var sections = [], section = {}, enrollment = '', wait = '';
+    $('.panel-group').find($('.panel')).each(function(i, elm) {
+        if ($(this).find('.panel-heading').text().trim() === 'Class Details') {
+            $(this).find('.row').children().last().children().first().children().each(function(i, elm) {
+                if (i === 1) seats.status = $(this).text().trim();
+                if (i === 3) seats.avail = $(this).text().trim();
+                if (i === 5) seats.cap = $(this).text().trim();
+                if (i === 7) seats.enrolled = $(this).text().trim();
+                if (i === 9) seats.waitCap = $(this).text().trim();
+                if (i === 11) seats.waitTotal = $(this).text().trim();
+            })
+        }else if ($(this).find('.panel-heading').text().trim().indexOf('Discussion') !== -1) {
+            $(this).find('.row').each(function(i, elm) {
+                split = $(this).children().eq(0).text().trim().split(' ')
+                section.num = split[0].match(/\d+/g)[0];
+                section.sec = split[2];
 
-    var sectionDom = null;
-    var numPossibleSectionDom = bodyDom.length;
-    for (var i = 0; i < numPossibleSectionDom; i++) {
-        if (typeof bodyDom[i] !== 'undefined' ) {
-            // TODO: this is disgusting
-            searchString = bodyDom[i].parent.children[1].children[0].children[0].data.toLowerCase();
-            if (searchString.indexOf('discussion') !== -1) {
-                sectionDom = $('.row', bodyDom[i]);
-            }
-            searchString = null;
+                enrollment = $(this).children().eq(4).text().trim().replace(/\s/g, '')
+                section.enrolled = parseInt(enrollment.substring(enrollment.indexOf(':') + 1, enrollment.indexOf('/')))
+                section.cap = parseInt(enrollment.substring(enrollment.indexOf('/') + 1))
+                wait = $(this).children().eq(5).text().trim()
+                section.wait = parseInt(wait.substring(wait.indexOf(':') + 1, wait.indexOf('/')));
+                section.waitTotal = parseInt(wait.substring(wait.indexOf('/') + 1));
+
+                section.status = $(this).children().eq(6).text().trim();
+                sections.push(section);
+                section = {};
+            })
+            seats.sec = sections;
         }
-    }
-
-    if (sectionDom !== null) {
-        var sections = [];
-        var section = {};
-        var enrollment = '';
-        var wati = '';
-        var split = [];
-        var classDataCompatibleTime = {};
-        var numSections = sectionDom.length;
-        for (var i = 0; i < numSections; i++) {
-            /*console.log(
-                // Section class number
-                sectionDom[i].children[1].children[0].data,
-                // Meeting time
-                sectionDom[i].children[3].children[0].data,
-                // TA
-                sectionDom[i].children[5].children[0].data,
-                // location
-                sectionDom[i].children[7].children[0].data,
-                // enrollment status
-                sectionDom[i].children[9].children[0].data,
-                // wait list
-                sectionDom[i].children[11].children[0].data,
-                // open?
-                sectionDom[i].children[13].children[1].data
-            )*/
-            split = sectionDom[i].children[1].children[0].data.split(' ');
-            section.num = split[0].match(/\d+/g)[0];
-            section.sec = split[2];
-            enrollment = sectionDom[i].children[9].children[0].data.replace(/\s/g, "");
-            wait = sectionDom[i].children[11].children[0].data
-            section.status = sectionDom[i].children[13].children[1].data.trim();
-            section.enrolled = parseInt(enrollment.substring(enrollment.indexOf(':') + 1, enrollment.indexOf('/')));
-            section.cap = parseInt(enrollment.substring(enrollment.indexOf('/') + 1));
-            section.wait = parseInt(wait.substring(wait.indexOf(':') + 1, wait.indexOf('/')));
-            section.waitTotal = parseInt(wait.substring(wait.indexOf('/') + 1));
-            sections.push(section);
-            section = {};
-        }
-        seats.sec = sections;
-    }
-
-    return seats;
-
+    })
+    return seats
 }
 
 var parseCourseDOMFromSelector = function(body) {
@@ -1321,13 +1233,6 @@ var getCourse = function(termId, classNumber) {
     })
 }
 
-var getEnrollment = function(termId, classNumber) {
-    return getCourseRawDom(termId, classNumber).then(function(body) {
-        var course = parseEnrollmentDOMFromSelector(body);
-        return course;
-    })
-}
-
 var getSeats = function(termId, classNumber) {
     return getCourseRawDom(termId, classNumber).then(function(body) {
         var seats = parseSeatsFromSelector(body);
@@ -1558,7 +1463,6 @@ module.exports = {
     getTerms: getTerms,
     getCourses: getCourses,
     getCourse: getCourse,
-    getEnrollment: getEnrollment,
     getSeats: getSeats,
     getGEDesc: getGEDesc,
     getObjByLastName: getObjByLastName,
