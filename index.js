@@ -1553,6 +1553,84 @@ var getTranscript = function(username, password) {
     })
 }
 
+var getFinalRawDom = function() {
+    return plainRequest('http://registrar.ucsc.edu/soc/final-examinations.html')
+}
+
+var quarterToNum = function(quarter) {
+    switch (quarter.toLowerCase()) {
+        case 'fall':
+        return '8';
+        break;
+        case 'winter':
+        return '0';
+        break;
+        case 'spring':
+        return '2';
+        break;
+        case 'summer':
+        return '4';
+        break;
+        default:
+        return null;
+        break;
+    }
+}
+
+var nameToCode = function(quarter, year) {
+    return '2' + year.slice(2) + quarterToNum(quarter);
+}
+
+var parseFinalDOM = function(body) {
+    var $ = cheerio.load(body);
+    var tables = $('.contentBox').find('table');
+    var body = null, split = [], rows = [], Class, Start, ExamDate, ExamTimes, obj = {};
+    var finals = {}
+    for (var i = 0, length = tables.length; i < length; i++) {
+        body = $(tables[i]).children().first();
+        // Since someone obviously didn't do their jobs properly, I can't use the ID identifier
+        if ($(body).children().first().text().trim().indexOf('Block') !== -1) continue;
+        split = $(body).children().first().text().trim().split(' ');
+        finals[nameToCode(split[0], split[1])] = [];
+        rows = $(body).find('tr');
+        for (var r = 0, length1 = rows.length; r < length1; r++) {
+            Class = $($(rows[r]).children().get(0)).text().trim();
+            Start = $($(rows[r]).children().get(1)).text().trim();
+            ExamDate = $($(rows[r]).children().get(2)).text().trim();
+            ExamTimes = $($(rows[r]).children().get(3)).text().trim();
+            if (Class === 'Class' || !Class || !ExamDate || !ExamTimes) continue;
+            obj = {
+                days: [],
+                hash: '',
+                date: {},
+                time: ''
+            }
+            if (Class.indexOf('M') !== -1) obj.days.push('Monday')
+            if (Class.indexOf('Tu') !== -1) obj.days.push('Tuesday')
+            if (Class.indexOf('W') !== -1) obj.days.push('Wednesday')
+            if (Class.indexOf('Th') !== -1) obj.days.push('Thursday')
+            if (Class.indexOf('F') !== -1) obj.days.push('Friday')
+            if (!Start) {
+                obj.hash = Class;
+            }else{
+                obj.hash = obj.days.join('-') + '-' + twelveTo24(Start.replace(/[^0-9a-zA-Z:]/g, '').toUpperCase());
+            }
+            delete obj.days;
+            obj.date = ExamDate;
+            obj.time = ExamTimes;
+            finals[nameToCode(split[0], split[1])].push(obj)
+        }
+    }
+    return finals;
+}
+
+var getFinalSchedule = function() {
+    return getFinalRawDom().then(function(body) {
+        var course = parseFinalDOM(body);
+        return course;
+    })
+}
+
 module.exports = {
     getSubjects: getSubjects,
     getTerms: getTerms,
@@ -1572,5 +1650,6 @@ module.exports = {
     getTranscriptHTML: getTranscriptHTML,
     parseTranscriptHTML: parseTranscriptHTML,
     getTranscript: getTranscript,
-    getMajorMinor: getMajorMinor
+    getMajorMinor: getMajorMinor,
+    getFinalSchedule: getFinalSchedule
 }

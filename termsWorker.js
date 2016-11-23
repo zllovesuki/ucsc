@@ -148,6 +148,7 @@ var checkForNewTerm = function() {
             })
             .then(job.calculateTermsStats)
             .then(job.saveMajorsMinors)
+            .then(job.saveFinalSchedules)
             .then(function() {
                 return uploadOneTerm(todoTerm)
             })
@@ -176,6 +177,7 @@ shouldStartFresh().then(function(weShould) {
         .then(job.saveMaps)
         .then(job.saveSubjects)
         .then(job.saveMajorsMinors)
+        .then(job.saveFinalSchedules)
         .then(uploadEverything)
         .then(dirtyGC)
     }else{
