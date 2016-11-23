@@ -65,8 +65,6 @@ var uploadOneTerm = function(code) {
         path.join(dbPath, 'timestamp', 'courses', code + '.json'),
         path.join(dbPath, 'terms', code + '.json'),
         path.join(dbPath, 'timestamp', 'terms', code + '.json'),
-        path.join(dbPath, 'index', code + '.json'),
-        path.join(dbPath, 'timestamp', 'index', code + '.json'),
         path.join(dbPath, 'terms.json'),
         path.join(dbPath, 'timestamp', 'terms.json'),
         path.join(dbPath, 'major-minor.json'),
