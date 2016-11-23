@@ -69,8 +69,8 @@ var uploadOneTerm = function(code) {
         path.join(dbPath, 'timestamp', 'terms.json'),
         path.join(dbPath, 'major-minor.json'),
         path.join(dbPath, 'timestamp', 'major-minor.json'),
-        path.join(dbPath, 'finals.json'),
-        path.join(dbPath, 'timestamp', 'finals.json')
+        path.join(dbPath, 'final.json'),
+        path.join(dbPath, 'timestamp', 'final.json')
     ]
     return Promise.mapSeries(files, function(file) {
         return upload(file);
