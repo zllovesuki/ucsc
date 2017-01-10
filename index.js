@@ -872,8 +872,23 @@ var parseDOMFromClassData = function(body) {
         split = [];
     }
 
+    var hashCounter = 0;
+    var hash = {};
+
     Object.keys(master).forEach(function(subject) {
         Object.keys(master[subject]).forEach(function(num) {
+            // We will now deduplicate locts (as brought up by class CRSM 150B, where is has THREE blocks)
+            master[subject][num].loct.forEach(function(loct) {
+                hash[(loct.loc ? loct.loc : 'Nothing') + '|' + (loct.t ? loct.t.day : [] ).join('|') + '|' + (loct.t ? loct.t.time.start + '|' + loct.t.time.end : 'Nothing')] = loct;
+            })
+            if (Object.keys(hash).length > 0) {
+                master[subject][num].loct = [];
+                for (var item in hash) {
+                    master[subject][num].loct[hashCounter++] = hash[item];
+                }
+                hashCounter = 0;
+                hash = {};
+            } // http://stackoverflow.com/questions/19501441/remove-duplicate-objects-from-an-array-using-javascript
             master[subject][num].dup = true;
             courses[subject].push(master[subject][num]);
         })
