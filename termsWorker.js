@@ -65,12 +65,12 @@ var uploadOneTerm = function(code) {
         path.join(dbPath, 'timestamp', 'courses', code + '.json'),
         path.join(dbPath, 'terms', code + '.json'),
         path.join(dbPath, 'timestamp', 'terms', code + '.json'),
-        path.join(dbPath, 'index', code + '.json'),
-        path.join(dbPath, 'timestamp', 'index', code + '.json'),
         path.join(dbPath, 'terms.json'),
         path.join(dbPath, 'timestamp', 'terms.json'),
         path.join(dbPath, 'major-minor.json'),
-        path.join(dbPath, 'timestamp', 'major-minor.json')
+        path.join(dbPath, 'timestamp', 'major-minor.json'),
+        path.join(dbPath, 'final.json'),
+        path.join(dbPath, 'timestamp', 'final.json')
     ]
     return Promise.mapSeries(files, function(file) {
         return upload(file);
@@ -127,20 +127,25 @@ var checkForNewTerm = function() {
         var todoTerm = localNewTerm;
         return job.ucsc.getCourses(remoteNewTerm, 25)
         .then(function(remoteCourses) {
+            var start = s3Terms[0].date.start;
+            var today = new Date();
+            var deadline = new Date(start);
+            var renew = new Date(start);
+            deadline.setDate(deadline.getDate() + 21 + 7);
+            renew.setDate(deadline.getDate() + 21 + 1);
+            if (deadline.getTime() < today.getTime()) {
+                console.log('It is 7 days after the 21 days drop deadline, we will skip fetching the latest term.')
+                return;
+            }
             if (Object.keys(remoteCourses).length > 0) {
-                console.log('We found a new term.')
-                todoTerm = remoteNewTerm;
-            }else{
-                console.log('No new terms found.')
-                console.log('But we will update the latest term on S3...');
-                var start = s3Terms[0].date.start;
-                var today = new Date();
-                var deadline = new Date(start);
-                deadline.setDate(deadline.getDate() + 21 + 7);
-                if (deadline.getTime() < today.getTime()) {
-                    console.log('But it is 7 days after the 21 days drop deadline, we will skip fetching the latest term.')
-                    return;
+                if (renew.getTime() >= today.getTime()) {
+                    console.log('We will update the latest term on S3 even though there is a new term until the drop deadline.')
+                }else{
+                    console.log('We found a new term.')
+                    todoTerm = remoteNewTerm;
                 }
+            }else{
+                console.log('No new terms found, updating latest term.')
             }
             return job.saveTermsList(todoTerm)
             .then(function() {
@@ -148,6 +153,7 @@ var checkForNewTerm = function() {
             })
             .then(job.calculateTermsStats)
             .then(job.saveMajorsMinors)
+            .then(job.saveFinalSchedules)
             .then(function() {
                 return uploadOneTerm(todoTerm)
             })
@@ -176,6 +182,7 @@ shouldStartFresh().then(function(weShould) {
         .then(job.saveMaps)
         .then(job.saveSubjects)
         .then(job.saveMajorsMinors)
+        .then(job.saveFinalSchedules)
         .then(uploadEverything)
         .then(dirtyGC)
     }else{

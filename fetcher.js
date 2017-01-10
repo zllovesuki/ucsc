@@ -482,6 +482,16 @@ var self = module.exports = {
                 return self.write('./db/timestamp/major-minor.json', Math.round(+new Date()/1000));
             })
         })
+    },
+
+    saveFinalSchedules: function() {
+        return ucsc.getFinalSchedule().then(function(finals) {
+            console.log('Saving final schedules')
+            return self.write('./db/final.json', finals)
+            .then(function() {
+                return self.write('./db/timestamp/final.json', Math.round(+new Date()/1000));
+            })
+        })
     }
 
 }
