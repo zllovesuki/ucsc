@@ -115,6 +115,36 @@ var dirtyGC = function() {
     process.exit(1)
 }
 
+// Date calculated based on @ucsc/dates.js
+
+var delta = function(termCode) {
+    switch (termCode[termCode.length - 1]) {
+        case '0': // Winter
+        return {
+            deadline: 21,
+            enrollment: 63 // use the upper bound
+        };
+
+        case '2': // Spring
+        return {
+            deadline: 18,
+            enrollment: 35 // use the upper bound
+        };
+
+        case '8': // Fall
+        return {
+            deadline: 20,
+            enrollment: 129
+        };
+
+        case '4': // Summer
+        return {
+            deadline: 7,
+            enrollment: 0
+        };
+    }
+}
+
 var checkForNewTerm = function() {
     /*
         TODO: locking
@@ -128,24 +158,25 @@ var checkForNewTerm = function() {
         return job.ucsc.getCourses(remoteNewTerm, 25)
         .then(function(remoteCourses) {
             var start = s3Terms[0].date.start;
+            var daysDeltaLocal = delta(localNewTerm);
+
             var today = new Date();
             var deadline = new Date(start);
-            var renew = new Date(start);
-            deadline.setDate(deadline.getDate() + 21 + 7);
-            renew.setDate(deadline.getDate() + 21 + 1);
-            if (deadline.getTime() < today.getTime()) {
-                console.log('It is 7 days after the 21 days drop deadline, we will skip fetching the latest term.')
-                return;
-            }
-            if (Object.keys(remoteCourses).length > 0) {
-                if (renew.getTime() >= today.getTime()) {
-                    console.log('We will update the latest term on S3 even though there is a new term until the drop deadline.')
-                }else{
-                    console.log('We found a new term.')
-                    todoTerm = remoteNewTerm;
-                }
+            var next = new Date(start);
+
+            deadline.setDate(deadline.getDate() + daysDeltaLocal.deadline);
+            next.setDate(deadline.getDate() + 3);
+
+            if (today.getTime() < next.getTime()) {
+                console.log('We will update the latest term on S3 (' + localNewTerm + ')')
             }else{
-                console.log('No new terms found, updating latest term.')
+                if (Object.keys(remoteCourses).length > 0) {
+                    console.log('We found a new term (' + remoteNewTerm + ')')
+                    todoTerm = remoteNewTerm;
+                }else{
+                    console.log('It is 3 days after the drop deadline and no new term was found, we will skip fetching the latest term.')
+                    return;
+                }
             }
             return job.saveTermsList(todoTerm)
             .then(function() {
@@ -164,7 +195,7 @@ var checkForNewTerm = function() {
     }).finally(function() {
         setTimeout(function() {
             checkForNewTerm()
-        }, 86400 * 1000) // check for new term every day
+        }, 21600 * 1000) // check for new term every 6 hours
     })
 }
 
