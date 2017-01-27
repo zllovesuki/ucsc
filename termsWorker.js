@@ -153,8 +153,8 @@ var checkForNewTerm = function() {
     return getTermsJsonOnS3().then(function(s3Terms) {
         s3Terms.sort(function(a, b) { return b.code - a.code });
         var localNewTerm = s3Terms[0].code;
-        var remoteNewTerm = job.ucsc.calculateNextTermCode(localNewTerm);
-        var todoTerm = localNewTerm;
+        var remoteNewTerm = job.ucsc.calculateNextTermCode(localNewTerm).toString();
+        var todoTerms = [];
         return job.ucsc.getCourses(remoteNewTerm, 25)
         .then(function(remoteCourses) {
             var start = s3Terms[0].date.start;
@@ -162,32 +162,35 @@ var checkForNewTerm = function() {
 
             var today = new Date();
             var deadline = new Date(start);
-            var next = new Date(start);
+            var next = new Date();
+            var priorityNext = new Date()
 
             deadline.setDate(deadline.getDate() + daysDeltaLocal.deadline);
-            next.setDate(deadline.getDate() + 3);
+            next.setDate(deadline.getDate() + 1);
+            priorityNext.setDate(deadline.getDate() - 5);
 
             if (today.getTime() < next.getTime()) {
                 console.log('We will update the latest term on S3 (' + localNewTerm + ')')
-            }else{
-                if (Object.keys(remoteCourses).length > 0) {
-                    console.log('We found a new term (' + remoteNewTerm + ')')
-                    todoTerm = remoteNewTerm;
-                }else{
-                    console.log('It is 3 days after the drop deadline and no new term was found, we will skip fetching the latest term.')
-                    return;
-                }
+                todoTerms.push(localNewTerm);
             }
-            return job.saveTermsList(todoTerm)
-            .then(function() {
-                return job.saveCourseInfo(todoTerm)
-            })
-            .then(job.calculateTermsStats)
-            .then(job.saveMajorsMinors)
-            .then(job.saveFinalSchedules)
-            .then(function() {
-                return uploadOneTerm(todoTerm)
-            })
+
+            if (Object.keys(remoteCourses).length > 0 && today.getTime() > priorityNext.getTime()) {
+                console.log('We found a new term (' + remoteNewTerm + ')')
+                todoTerms.push(remoteNewTerm);
+            }
+
+            return Promise.map(todoTerms, function(todoTerm) {
+                return job.saveTermsList(todoTerm)
+                .then(function() {
+                    return job.saveCourseInfo(todoTerm)
+                })
+                .then(job.calculateTermsStats)
+                .then(job.saveMajorsMinors)
+                .then(job.saveFinalSchedules)
+                .then(function() {
+                    return uploadOneTerm(todoTerm)
+                })
+            }, { concurrency: 1 })
         })
     }).catch(function(e) {
         console.error('Error thrown in checkForNewTerm', e)
