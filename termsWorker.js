@@ -152,33 +152,43 @@ var checkForNewTerm = function() {
     console.log('Checking for new terms on pisa');
     return getTermsJsonOnS3().then(function(s3Terms) {
         s3Terms.sort(function(a, b) { return b.code - a.code });
-        var localNewTerm = s3Terms[0].code;
-        var remoteNewTerm = job.ucsc.calculateNextTermCode(localNewTerm).toString();
+
         var todoTerms = [];
-        return job.ucsc.getCourses(remoteNewTerm, 25)
-        .then(function(remoteCourses) {
-            var start = s3Terms[0].date.start;
-            var daysDeltaLocal = delta(localNewTerm);
+        var localNewTerm = '';
+        var remoteNewTerm = null;
+        var today = new Date();
+        var deadline = new Date();
+        var next = new Date();
+        var daysDeltaLocal = {};
 
-            var today = new Date();
-            var deadline = new Date(start);
-            var next = new Date();
-            var priorityNext = new Date()
-
+        return Promise.map(s3Terms, function(term) {
+            localNewTerm = term.code;
+            deadline = new Date(term.date.start);
+            daysDeltaLocal = delta(localNewTerm);
             deadline.setDate(deadline.getDate() + daysDeltaLocal.deadline);
             next.setDate(deadline.getDate() + 1);
-            priorityNext.setDate(deadline.getDate() - 5);
-
             if (today.getTime() < next.getTime()) {
-                console.log('We will update the latest term on S3 (' + localNewTerm + ')')
+                console.log('We will update the term ' + localNewTerm + '.')
                 todoTerms.push(localNewTerm);
             }
+        }, { concurrency: 1 })
+        .then(function() {
+            todoTerms.sort(function(a, b) { return b - a });
 
-            if (Object.keys(remoteCourses).length > 0 && today.getTime() > priorityNext.getTime()) {
-                console.log('We found a new term (' + remoteNewTerm + ')')
+            if (todoTerms.length > 0) {
+                remoteNewTerm = job.ucsc.calculateNextTermCode(todoTerms[0]).toString();
+                return job.ucsc.getCourses(remoteNewTerm, 25)
+            }else{
+                return {};
+            }
+        })
+        .then(function(remoteCourses) {
+            if (remoteNewTerm !== null && Object.keys(remoteCourses).length > 0) {
+                console.log('We will fetch the term ' + remoteNewTerm + '.')
                 todoTerms.push(remoteNewTerm);
             }
-
+        })
+        .then(function() {
             return Promise.map(todoTerms, function(todoTerm) {
                 return job.saveTermsList(todoTerm)
                 .then(function() {
