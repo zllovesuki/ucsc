@@ -165,7 +165,7 @@ var checkForNewTerm = function() {
             var next = new Date(start);
 
             deadline.setDate(deadline.getDate() + daysDeltaLocal.deadline);
-            next.setDate(deadline.getDate() + 3);
+            next.setDate(deadline.getDate() + 1);
 
             if (today.getTime() < next.getTime()) {
                 console.log('We will update the latest term on S3 (' + localNewTerm + ')')
@@ -174,7 +174,7 @@ var checkForNewTerm = function() {
                     console.log('We found a new term (' + remoteNewTerm + ')')
                     todoTerm = remoteNewTerm;
                 }else{
-                    console.log('It is 3 days after the drop deadline and no new term was found, we will skip fetching the latest term.')
+                    console.log('It is 1 day after the drop deadline and no new term was found, we will skip fetching the latest term.')
                     return;
                 }
             }
