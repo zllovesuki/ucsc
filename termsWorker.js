@@ -54,23 +54,32 @@ var uploadEverything = function() {
     }, { concurrency: 10 })
 }
 
-var uploadOneTerm = function(code) {
-    console.log('Uploading term', code)
+var uploadExtra = function() {
+    console.log('Uploading extras')
     var files = [
         path.join(dbPath, 'offered', 'spring.json'),
         path.join(dbPath, 'offered', 'summer.json'),
         path.join(dbPath, 'offered', 'fall.json'),
         path.join(dbPath, 'offered', 'winter.json'),
-        path.join(dbPath, 'courses', code + '.json'),
-        path.join(dbPath, 'timestamp', 'courses', code + '.json'),
-        path.join(dbPath, 'terms', code + '.json'),
-        path.join(dbPath, 'timestamp', 'terms', code + '.json'),
         path.join(dbPath, 'terms.json'),
         path.join(dbPath, 'timestamp', 'terms.json'),
         path.join(dbPath, 'major-minor.json'),
         path.join(dbPath, 'timestamp', 'major-minor.json'),
         path.join(dbPath, 'final.json'),
         path.join(dbPath, 'timestamp', 'final.json')
+    ]
+    return Promise.mapSeries(files, function(file) {
+        return upload(file);
+    })
+}
+
+var uploadOneTerm = function(code) {
+    console.log('Uploading term', code)
+    var files = [
+        path.join(dbPath, 'courses', code + '.json'),
+        path.join(dbPath, 'timestamp', 'courses', code + '.json'),
+        path.join(dbPath, 'terms', code + '.json'),
+        path.join(dbPath, 'timestamp', 'terms', code + '.json')
     ]
     return Promise.mapSeries(files, function(file) {
         return upload(file);
@@ -194,13 +203,14 @@ var checkForNewTerm = function() {
                 .then(function() {
                     return job.saveCourseInfo(todoTerm)
                 })
-                .then(job.calculateTermsStats)
-                .then(job.saveMajorsMinors)
-                .then(job.saveFinalSchedules)
                 .then(function() {
                     return uploadOneTerm(todoTerm)
                 })
             }, { concurrency: 1 })
+            .then(job.calculateTermsStats)
+            .then(job.saveMajorsMinors)
+            .then(job.saveFinalSchedules)
+            .then(uploadExtra)
         })
     }).catch(function(e) {
         console.error('Error thrown in checkForNewTerm', e)
