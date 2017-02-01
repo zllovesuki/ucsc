@@ -176,7 +176,7 @@ var checkForNewTerm = function() {
             next = new Date(term.date.start);
             daysDeltaLocal = delta(localNewTerm);
             deadline.setDate(deadline.getDate() + daysDeltaLocal.deadline);
-            next.setDate(next.getDate() + daysDeltaLocal.deadline + 1);
+            next.setDate(next.getDate() + daysDeltaLocal.deadline + 2);
             if (today.getTime() < next.getTime()) {
                 console.log('We will update the term ' + localNewTerm + '.')
                 todoTerms.push(localNewTerm);
