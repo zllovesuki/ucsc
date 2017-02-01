@@ -165,17 +165,18 @@ var checkForNewTerm = function() {
         var todoTerms = [];
         var localNewTerm = '';
         var remoteNewTerm = null;
-        var today = new Date();
-        var deadline = new Date();
+        var deadline = null;
         var next = new Date();
+        var today = new Date();
         var daysDeltaLocal = {};
 
         return Promise.map(s3Terms, function(term) {
             localNewTerm = term.code;
             deadline = new Date(term.date.start);
+            next = new Date(term.date.start);
             daysDeltaLocal = delta(localNewTerm);
             deadline.setDate(deadline.getDate() + daysDeltaLocal.deadline);
-            next.setDate(deadline.getDate() + 1);
+            next.setDate(next.getDate() + daysDeltaLocal.deadline + 1);
             if (today.getTime() < next.getTime()) {
                 console.log('We will update the term ' + localNewTerm + '.')
                 todoTerms.push(localNewTerm);
@@ -186,10 +187,10 @@ var checkForNewTerm = function() {
 
             if (todoTerms.length > 0) {
                 remoteNewTerm = job.ucsc.calculateNextTermCode(todoTerms[0]).toString();
-                return job.ucsc.getCourses(remoteNewTerm, 25)
             }else{
-                return {};
+                remoteNewTerm = job.ucsc.calculateNextTermCode(s3Terms[0].code).toString();
             }
+            return job.ucsc.getCourses(remoteNewTerm, 25)
         })
         .then(function(remoteCourses) {
             if (remoteNewTerm !== null && Object.keys(remoteCourses).length > 0) {
@@ -198,6 +199,7 @@ var checkForNewTerm = function() {
             }
         })
         .then(function() {
+            console.log(todoTerms)
             return Promise.map(todoTerms, function(todoTerm) {
                 return job.saveTermsList(todoTerm)
                 .then(function() {
