@@ -199,7 +199,6 @@ var checkForNewTerm = function() {
             }
         })
         .then(function() {
-            console.log(todoTerms)
             return Promise.map(todoTerms, function(todoTerm) {
                 return job.saveTermsList(todoTerm)
                 .then(function() {
