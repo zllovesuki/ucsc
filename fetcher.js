@@ -79,6 +79,7 @@ var self = module.exports = {
                                 var getCourse = function(term, course) {
                                     return ucsc.getCourse(term.code, course.num)
                                     .then(function(courseInfo) {
+                                        if (courseInfo.md.start === 'N/A') return;
                                         self.foundTime[term.code] = true;
                                         term.date = courseInfo.md;
                                     })
