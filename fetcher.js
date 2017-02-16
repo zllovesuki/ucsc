@@ -53,18 +53,20 @@ var self = module.exports = {
     */
     courseListTimestamp: {},
     foundTime: {},
-    saveTermsList: function(termCodeToAppend) {
-        termCodeToAppend = (typeof termCodeToAppend === 'undefined' ? null : termCodeToAppend)
+    saveTermsList: function(termCodesToAppend) {
+        termCodesToAppend = (typeof termCodesToAppend === 'undefined' ? null : termCodesToAppend)
         return ucsc.getTerms().then(function(terms) {
-            if (termCodeToAppend !== null) {
-                if (terms.filter(function(el) {
-                    return el.code == termCodeToAppend
-                }).length === 0) {
-                    terms.unshift({
-                        code: termCodeToAppend.toString(),
-                        name: ucsc.calculateTermName(termCodeToAppend)
-                    })
-                }
+            if (termCodesToAppend !== null) {
+                termCodesToAppend.forEach(function(termCodeToAppend) {
+                    if (terms.filter(function(el) {
+                        return el.code == termCodeToAppend
+                    }).length === 0) {
+                        terms.unshift({
+                            code: termCodeToAppend,
+                            name: ucsc.calculateTermName(termCodeToAppend)
+                        })
+                    }
+                })
             }
             return Promise.map(terms, function(term) {
                 self.foundTime[term.code] = false;
