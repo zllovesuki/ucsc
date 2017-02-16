@@ -172,7 +172,7 @@ var checkForNewTerm = function() {
 
         return Promise.map(s3Terms, function(term) {
             localNewTerm = term.code;
-            if (!term.date.start) {
+            if (!term.date && !term.date.start) {
                 console.log('No start date for ' + term + ', skipping')
                 return;
             }
