@@ -183,7 +183,7 @@ var checkForNewTerm = function() {
             next.setDate(next.getDate() + daysDeltaLocal.deadline + 2);
             if (today.getTime() < next.getTime()) {
                 console.log('We will update the term ' + localNewTerm + '.')
-                todoTerms.push(localNewTerm);
+                todoTerms.push(localNewTerm.toString());
             }
         }, { concurrency: 1 })
         .then(function() {
@@ -199,12 +199,12 @@ var checkForNewTerm = function() {
         .then(function(remoteCourses) {
             if (remoteNewTerm !== null && Object.keys(remoteCourses).length > 0) {
                 console.log('We will fetch the term ' + remoteNewTerm + '.')
-                todoTerms.push(remoteNewTerm);
+                todoTerms.push(remoteNewTerm.toString());
             }
         })
         .then(function() {
             return Promise.map(todoTerms, function(todoTerm) {
-                return job.saveTermsList(todoTerm)
+                return job.saveTermsList(todoTerms)
                 .then(function() {
                     return job.saveCourseInfo(todoTerm)
                 })
