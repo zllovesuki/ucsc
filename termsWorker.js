@@ -172,6 +172,10 @@ var checkForNewTerm = function() {
 
         return Promise.map(s3Terms, function(term) {
             localNewTerm = term.code;
+            if (!term.date.start) {
+                console.log('No start date for ' + term + ', skipping')
+                return;
+            }
             deadline = new Date(term.date.start);
             next = new Date(term.date.start);
             daysDeltaLocal = delta(localNewTerm);
