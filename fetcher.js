@@ -129,10 +129,10 @@ var self = module.exports = {
     */
     coursesInfo: {},
     courseInfoTimestamp: {},
-    saveCourseInfo: function(skipLessThan) {
+    saveCourseInfo: function(doTerms) {
         return self.read('./db/terms.json').then(function(json) {
             return Promise.map(json, function(term) {
-                if ( term.code < skipLessThan ) {
+                if ( doTerms.indexOf(term.code) === -1 ) {
                     console.log('Skipping', term.name, 'as specified')
                     return;
                 }

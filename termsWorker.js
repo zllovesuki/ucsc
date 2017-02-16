@@ -203,15 +203,13 @@ var checkForNewTerm = function() {
             }
         })
         .then(function() {
-            return Promise.map(todoTerms, function(todoTerm) {
-                return job.saveTermsList(todoTerms)
-                .then(function() {
-                    return job.saveCourseInfo(todoTerm)
-                })
-                .then(function() {
-                    return uploadOneTerm(todoTerm)
-                })
-            }, { concurrency: 1 })
+            return job.saveTermsList(todoTerms)
+            .then(function() {
+                return job.saveCourseInfo(todoTerms)
+            })
+            .then(function() {
+                return Promise.map(todoTerms, uploadOneTerm, { concurrency: 3 })
+            })
             .then(job.calculateTermsStats)
             .then(job.saveMajorsMinors)
             .then(job.saveFinalSchedules)
