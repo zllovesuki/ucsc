@@ -66,7 +66,7 @@ var uploadMappings = function() {
 var shouldStartFresh = function() {
     console.log('Check if S3 has data...')
     return new Promise(function(resolve, reject) {
-        s3.getFile('/rmp.json', function(err, res) {
+        s3.getFile('rmp.json', function(err, res) {
             if (err) {
                 reject(err);
             }

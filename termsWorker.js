@@ -105,7 +105,7 @@ var shouldStartFresh = function() {
 
 var getTermsJsonOnS3 = function() {
     return new Promise(function(resolve, reject) {
-        s3.getFile('/terms.json', function(err, res) {
+        s3.getFile('terms.json', function(err, res) {
             if (err) {
                 reject(err);
             }

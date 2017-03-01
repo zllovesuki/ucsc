@@ -65,7 +65,7 @@ var s3ReadHandler = function(source) {
 
 var getScoresOnS3 = function(tid) {
     return new Promise(function(resolve, reject) {
-        s3.getFile('/rmp/scores/' + tid + '.json', function(err, res) {
+        s3.getFile('rmp/scores/' + tid + '.json', function(err, res) {
             if (err) {
                 reject(err);
             }
@@ -124,11 +124,11 @@ var checkForChanges = function() {
     console.log('Comparing S3 with RMP...')
     rmp = {};
     return Promise.all([
-        s3ReadHandler('/rmp.json'),
-        s3ReadHandler('/terms.json')
+        s3ReadHandler('rmp.json'),
+        s3ReadHandler('terms.json')
     ]).spread(function(mapping, json) {
         return Promise.map(json, function(term) {
-            return s3ReadHandler('/terms/' + term.code + '.json').then(function(courses) {
+            return s3ReadHandler('terms/' + term.code + '.json').then(function(courses) {
                 return Promise.map(Object.keys(courses), function(subject) {
                     return Promise.map(courses[subject], function(course) {
                         if (!(course.ins.f && course.ins.l)) {
