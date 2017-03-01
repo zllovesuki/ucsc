@@ -6,7 +6,9 @@ var path = require('path');
 var fs = require('fs')
 var pm2 = require('pm2')
 
-var s3 = knox.createClient(config.s3);
+var s3 = knox.createClient(Object.assign(config.s3, {
+    style: 'path'
+}));
 
 var db = __dirname + '/db',
     dbPath = path.resolve(db);
