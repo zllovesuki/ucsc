@@ -90,7 +90,7 @@ var uploadOneTerm = function(code) {
 var shouldStartFresh = function() {
     console.log('Check if S3 has data...')
     return new Promise(function(resolve, reject) {
-        s3.getFile('/terms.json', function(err, res) {
+        s3.getFile('terms.json', function(err, res) {
             if (err) {
                 reject(err);
             }
