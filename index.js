@@ -480,7 +480,9 @@ var parseRateMyProfessorFromSelector = function(body) {
         })
     })
 
-    rating.count = $('.rating-count').text().trim().match(/\d+/g)[0];
+    var count = $('.rating-count').text().trim().match(/\d+/g);
+
+    rating.count = count ? count[0] : 'N/A';
 
     return rating;
 }
