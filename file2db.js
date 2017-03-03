@@ -41,3 +41,13 @@ var uploadEverything = function() {
         return upload(file);
     }, { concurrency: 10 })
 }
+
+r.connect({
+    host: config.host,
+    port: 28015
+}).then(function(conn) {
+    r.conn = conn;
+    uploadEverything().then(function() {
+        conn.close()
+    })
+})
