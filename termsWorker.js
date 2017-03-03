@@ -4,6 +4,7 @@ var knox = require('knox');
 var config = require('./config');
 var path = require('path');
 var fs = require('fs')
+var r = require('rethinkdb')
 
 var s3 = knox.createClient(Object.assign(config.s3, {
     style: 'path'
@@ -24,7 +25,15 @@ var upload = function(source) {
                     return reject(err);
                 }
                 console.log(source, 'uploaded')
-                return resolve();
+                r.db('data').table('flat').insert({
+                    key: source.substring(source.indexOf('db') + 2).slice(0, -5),
+                    value: fs.readFileSync(source).toString('utf-8')
+                }).run(r.conn).then(function(resilt) {
+                    console.log(source, 'saved to database')
+                    return resolve();
+                }).catch(function(e) {
+                    return reject(e)
+                })
             })
         })
     });
@@ -226,28 +235,34 @@ var checkForNewTerm = function() {
     })
 }
 
-shouldStartFresh().then(function(weShould) {
-    if (weShould || !!process.env.FRESH) {
-        // initialize everything
-        if (!!process.env.FRESH) console.log('Forced fresh start')
-        else console.log('No data found on S3, fetching fresh data...')
-        // download everything...
-        // then uploading everything
-        return job.saveTermsList()
-        .then(job.saveCourseInfo)
-        .then(job.calculateTermsStats)
-        .then(job.saveGEDesc)
-        .then(job.saveMaps)
-        .then(job.saveSubjects)
-        .then(job.saveMajorsMinors)
-        .then(job.saveFinalSchedules)
-        .then(uploadEverything)
-        .then(dirtyGC)
-    }else{
-        console.log('Data already populated on S3.')
-    }
-}).then(function() {
-    checkForNewTerm();
+r.connect({
+    host: config.host,
+    port: 28015
+}).then(function(conn) {
+    r.conn = conn;
+    shouldStartFresh().then(function(weShould) {
+        if (weShould || !!process.env.FRESH) {
+            // initialize everything
+            if (!!process.env.FRESH) console.log('Forced fresh start')
+            else console.log('No data found on S3, fetching fresh data...')
+            // download everything...
+            // then uploading everything
+            return job.saveTermsList()
+            .then(job.saveCourseInfo)
+            .then(job.calculateTermsStats)
+            .then(job.saveGEDesc)
+            .then(job.saveMaps)
+            .then(job.saveSubjects)
+            .then(job.saveMajorsMinors)
+            .then(job.saveFinalSchedules)
+            .then(uploadEverything)
+            .then(dirtyGC)
+        }else{
+            console.log('Data already populated on S3.')
+        }
+    }).then(function() {
+        checkForNewTerm();
+    })
 }).catch(function(e) {
-    console.error('S3 Client returns Error', e)
+    console.error(e)
 })
