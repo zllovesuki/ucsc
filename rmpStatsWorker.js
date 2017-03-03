@@ -4,6 +4,7 @@ var knox = require('knox');
 var config = require('./config');
 var path = require('path');
 var fs = require('fs')
+var r = require('rethinkdb')
 
 var s3 = knox.createClient(Object.assign(config.s3, {
     style: 'path'
@@ -24,7 +25,17 @@ var upload = function(source) {
                     return reject(err);
                 }
                 console.log(source, 'uploaded')
-                return resolve();
+                r.db('data').table('flat').insert({
+                    key: source.substring(source.indexOf('db') + 2).slice(0, -5),
+                    value: fs.readFileSync(source).toString('utf-8')
+                }, {
+                    conflict: 'replace'
+                }).run(r.conn).then(function(resilt) {
+                    console.log(source, 'saved to database')
+                    return resolve();
+                }).catch(function(e) {
+                    return reject(e)
+                })
             })
         })
     });
@@ -185,9 +196,17 @@ var checkForChanges = function() {
     })
 }
 
-checkForChanges().then(function() {
-    console.log('Next data fetch is 14 days later.')
-    setTimeout(function() {
-        checkForChanges()
-    }, 1209600 * 1000) // check for changes every 14 days
+r.connect({
+    host: config.host,
+    port: 28015
+}).then(function(conn) {
+    r.conn = conn;
+    checkForChanges().then(function() {
+        console.log('Next data fetch is 14 days later.')
+        setTimeout(function() {
+            checkForChanges()
+        }, 1209600 * 1000) // check for changes every 14 days
+    })
+}).catch(function(e) {
+    console.error(e)
 })
