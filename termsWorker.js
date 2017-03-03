@@ -28,6 +28,8 @@ var upload = function(source) {
                 r.db('data').table('flat').insert({
                     key: source.substring(source.indexOf('db') + 2).slice(0, -5),
                     value: fs.readFileSync(source).toString('utf-8')
+                }, {
+                    conflict: 'replace'
                 }).run(r.conn).then(function(resilt) {
                     console.log(source, 'saved to database')
                     return resolve();
