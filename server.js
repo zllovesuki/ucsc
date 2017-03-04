@@ -1,5 +1,5 @@
 var r = require('rethinkdb'),
-    config = require('./config');
+    config = require('./config/config');
 
 r.connect({
     host: config.host,

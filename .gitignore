@@ -1,6 +1,6 @@
 node_modules/
 cookies.json
 testReq.js
-config.json
+config/
 .DS_Store
 db/**/*.json

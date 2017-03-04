@@ -1,0 +1,56 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  labels:
+    app: ucsc-api
+    version: v1
+  name: ucsc-api
+  namespace: slug
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ucsc-api
+  template:
+    metadata:
+      labels:
+        app: ucsc-api
+    spec:
+      containers:
+      imagePullSecrets:
+        - name: rachel-sh-login
+      - name: notify-api
+        image: rachel.sh/zllovesuki/ucsc-api:4.5.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 2008
+          protocol: TCP
+        args:
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 2008
+          initialDelaySeconds: 120
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: config-volume
+          mountPath: /usr/src/app/config
+      volumes:
+      - name: config-volume
+        secret:
+          secretName: notify
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: ucsc-api
+  name: ucsc-api
+  namespace: slug
+spec:
+  type: ClusterIP
+  ports:
+  - port: 2008
+    targetPort: 2008
+  selector:
+    app: ucsc-api

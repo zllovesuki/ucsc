@@ -1,0 +1,20 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ucsc-api-map
+  namespace: slug
+  annotations:
+    kubernetes.io/tls-acme: "true"
+spec:
+  tls:
+  - secretName: ucsc-api-tls
+    hosts:
+    - data.slugsurvival.com
+  rules:
+  - host: data.slugsurvival.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: ucsc-api
+          servicePort: 2008
