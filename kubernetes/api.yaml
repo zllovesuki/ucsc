@@ -17,7 +17,7 @@ spec:
         app: ucsc-api
     spec:
       containers:
-      - name: notify-api
+      - name: ucsc-api
         image: rachel.sh/zllovesuki/ucsc-api:4.5.0
         imagePullPolicy: IfNotPresent
         ports:
@@ -38,7 +38,7 @@ spec:
       volumes:
       - name: ucsc-config-volume
         secret:
-          secretName: notify
+          secretName: ucsc-config
 ---
 kind: Service
 apiVersion: v1
