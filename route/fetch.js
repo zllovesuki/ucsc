@@ -103,6 +103,22 @@ router.get('/term/:termId', function(req, res, next) {
     })
 })
 
+router.get('/:filename', function(req, res, next) {
+    var r = req.r;
+    var filename = req.params.filename || '';
+    filename = filename.slice(-5) === '.json' ? filename.slice(0, -5) : filename;
+    r.db('data').table('flat').get('/' + filename).run(r.conn).then(function(result) {
+        if (result !== null) {
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.parse(result.value));
+        }else{
+            var error = new Error('Not found');
+            error.responseCode = 404;
+            next(error)
+        }
+    })
+})
+
 router.get('/rmp/:tid', function(req, res, next) {
     var r = req.r;
     var tid = req.params.tid || '';
