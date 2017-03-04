@@ -20,8 +20,6 @@ spec:
       - name: notify-api
         image: rachel.sh/zllovesuki/ucsc-api:4.5.0
         imagePullPolicy: IfNotPresent
-        imagePullSecrets:
-        - name: rachel-sh-login
         ports:
         - containerPort: 2008
           protocol: TCP
@@ -35,6 +33,8 @@ spec:
         volumeMounts:
         - name: ucsc-config-volume
           mountPath: /usr/src/app/config
+      imagePullSecrets:
+      - name: rachel-sh-login
       volumes:
       - name: ucsc-config-volume
         secret:
