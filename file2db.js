@@ -1,5 +1,5 @@
 var Promise = require('bluebird')
-var config = require('./config/config');
+var config = require('./config');
 var path = require('path');
 var fs = require('fs')
 var r = require('rethinkdb')
