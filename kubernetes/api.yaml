@@ -21,7 +21,7 @@ spec:
         image: rachel.sh/zllovesuki/ucsc-api:4.5.0
         imagePullPolicy: IfNotPresent
         imagePullSecrets:
-          - name: rachel-sh-login
+        - name: rachel-sh-login
         ports:
         - containerPort: 2008
           protocol: TCP
