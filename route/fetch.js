@@ -28,6 +28,7 @@ router.get('/timestamp/base', function(req, res, next) {
 router.get('/base', function(req, res, next) {
     var r = req.r;
     r.db('data').table('flat').getAll(
+        '/final',
         '/terms',
         '/rmp',
         '/subjects',
@@ -39,7 +40,7 @@ router.get('/base', function(req, res, next) {
     ).run(r.conn).then(function(cursor) {
         return cursor.toArray();
     }).then(function(results) {
-        if (results.length === 8) {
+        if (results.length === 9) {
             res.setHeader('Content-Type', 'application/json');
             res.send(results.reduce(function(array, result) {
                 array[result.key.slice(result.key.lastIndexOf('/') + 1)] = JSON.parse(result.value);
