@@ -1,0 +1,9 @@
+{
+    "apps": [
+        {
+            "name": "ucsc-data-server",
+            "script": "server.js",
+            "watch": true
+        }
+    ]
+}
