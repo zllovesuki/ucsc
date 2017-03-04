@@ -3,7 +3,7 @@ module.exports = function(r) {
 		path = require('path'),
 		cors = require('cors'),
         config = require('./config'),
-        pkg = require('./package.json'),
+        version = require('./version.json'),
 		app = express(),
         fetch = require('./route/fetch'),
         help = require('./route/help');
@@ -30,7 +30,7 @@ module.exports = function(r) {
 
 	// catch 404 and forward to error handler
 	app.use(function(req, res, next) {
-		res.status(200).send({ok: true, message: 'UCSC Courses Data API', version: pkg.version});
+		res.status(200).send({ok: true, message: 'UCSC Courses Data API', version: version});
 	});
 
 	// production error handler
