@@ -110,7 +110,7 @@ router.get('/:filename', function(req, res, next) {
     r.db('data').table('flat').get('/' + filename).run(r.conn).then(function(result) {
         if (result !== null) {
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.parse(result.value));
+            res.send(JSON.parse(result.value));
         }else{
             var error = new Error('Not found');
             error.responseCode = 404;
