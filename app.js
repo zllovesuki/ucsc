@@ -6,12 +6,24 @@ module.exports = function(r) {
         version = require('./version.json'),
 		app = express(),
         fetch = require('./route/fetch'),
-        help = require('./route/help');
+        help = require('./route/help'),
+        apicache = require('apicache'),
+        redis = require('redis');
 
     app.use(function(req, res, next){
 		req.r = r;
 		next();
 	});
+
+    var cacheWithRedis = apicache.options({
+        redisClient: redis.createClient({
+            host: config.redis || 'localhost'
+        })
+    }).middleware;
+
+    var cache200 = cacheWithRedis('60 minutes', function(req, res) {
+        return req.method === 'GET' && res.statusCode === 200
+    })
 
     var corsDelegation = function(req, callback) {
         var corsOptions;
@@ -25,7 +37,7 @@ module.exports = function(r) {
 
     // r.db('ucsc').table('2168').group('courseNum').count().ungroup().orderBy(r.desc("reduction"))
 
-    app.use('/', cors(corsDelegation), fetch);
+    app.use('/', cors(corsDelegation), cache200, fetch);
     app.use('/help', help);
 
 	// catch 404 and forward to error handler
