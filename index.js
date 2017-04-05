@@ -13,6 +13,7 @@ var maps = {
     libraries: 'http://maps.ucsc.edu/content/all-libraries'
 };
 var request = require('request').defaults({
+    forever: true,
     pool: {
         maxSockets: process.env.NUMSOCKETS ? process.env.NUMSOCKETS : 20
     },
