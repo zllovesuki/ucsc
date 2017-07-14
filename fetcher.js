@@ -54,9 +54,8 @@ var self = module.exports = {
     courseListTimestamp: {},
     foundTime: {},
     saveTermsList: function(termCodesToAppend) {
-        termCodesToAppend = (typeof termCodesToAppend === 'undefined' ? null : termCodesToAppend)
         return ucsc.getTerms().then(function(terms) {
-            if (termCodesToAppend !== null) {
+            if (typeof termCodesToAppend !== 'undefined') {
                 termCodesToAppend.forEach(function(termCodeToAppend) {
                     if (terms.filter(function(el) {
                         return el.code == termCodeToAppend
@@ -132,7 +131,7 @@ var self = module.exports = {
     saveCourseInfo: function(doTerms) {
         return self.read('./db/terms.json').then(function(json) {
             return Promise.map(json, function(term) {
-                if ( doTerms.indexOf(term.code) === -1 ) {
+                if ( typeof doTerms !== 'undefined' && doTerms.indexOf(term.code) === -1 ) {
                     console.log('Skipping', term.name, 'as specified')
                     return;
                 }
