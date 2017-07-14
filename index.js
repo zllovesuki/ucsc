@@ -31,6 +31,24 @@ if (process.env.SOCKS) {
     var Agent = require('socks5-http-client/lib/Agent');
 }
 
+var common = {
+    'binds[:reg_status]': 'all',
+    'binds[:subject]': '',
+    'binds[:catalog_nbr_op]': '=',
+    'binds[:catalog_nbr]': '',
+    'binds[:title]': '',
+    'binds[:instr_name_op]': '=',
+    'binds[:instructor]': '',
+    'binds[:ge]': '',
+    'binds[:crse_units_op]': '=',
+    'binds[:crse_units_from]': '',
+    'binds[:crse_units_to]': '',
+    'binds[:crse_units_exact]': '',
+    'binds[:days]': '',
+    'binds[:times]': '',
+    'binds[:acad_career]': ''
+};
+
 var calculateNextTermCode = function(currentLatestTermCode) {
     currentLatestTermCode = currentLatestTermCode.toString()
     var nextTermCode = 0;
@@ -356,38 +374,29 @@ var getSubjects = function() {
 }
 
 var getCoursesRawDom = function(termId, limit) {
-    return secureRequest('https://pisa.ucsc.edu/class_search/index.php', {
+    return secureRequest('https://pisa.ucsc.edu/class_search/index.php', Object.assign({
         'action': 'results',
-        'binds[:term]': termId,
-        'binds[:reg_status]': 'all',
-        'binds[:subject]': '',
-        'binds[:catalog_nbr_op]': '=',
-        'binds[:catalog_nbr]': '',
-        'binds[:title]': '',
-        'binds[:instr_name_op]': '=',
-        'binds[:instructor]': '',
-        'binds[:ge]': '',
-        'binds[:crse_units_op]': '=',
-        'binds[:crse_units_from]': '',
-        'binds[:crse_units_to]': '',
-        'binds[:crse_units_exact]': '',
-        'binds[:days]': '',
-        'binds[:times]': '',
-        'binds[:acad_career]': ''
-    }, true)
+        'binds[:term]': termId
+    }, common), true)
     .then(function(body) {
-        return secureRequest('https://pisa.ucsc.edu/class_search/index.php', {
+        return secureRequest('https://pisa.ucsc.edu/class_search/index.php', Object.assign({
             'action': 'update_segment',
-            'Rec_Dur': limit || 25
-        }, true)
+            'binds[:term]': termId,
+            'rec_start': 0,
+            'rec_dur': limit || 25
+        }, common), true)
     })
 }
 
 var getCourseRawDom = function(termId, courseNumber) {
-    return secureRequest('https://pisa.ucsc.edu/class_search/index.php?action=detail&class_data=' + encodeURIComponent(Base64.encode(serialize({
-        STRM: termId,
-        CLASS_NBR: courseNumber
-    }))))
+    return secureRequest('https://pisa.ucsc.edu/class_search/index.php', Object.assign({
+        'action': 'detail',
+        'binds[:term]': termId,
+        'class_data[:STRM]': termId,
+        'class_data[:CLASS_NBR]': courseNumber,
+        'rec_start': 0,
+        'rec_dur': 25
+    }, common), true)
 }
 
 var getGEDescRawDom = function() {
