@@ -1163,7 +1163,7 @@ var downloadMajorMinor = function() {
             return resolve();
         })
         .on('error', function(err) {
-            return resolve(err);
+            return reject(err);
         })
         .pipe(fs.createWriteStream('/tmp/major-minor.pdf'))
     });
@@ -1186,7 +1186,7 @@ var pdf2HTML = function(filename) {
         })
 
         pdftohtml.on('exit', function() {
-            if (errorOcc) reject(err);
+            if (errorOcc) reject();
             else resolve(html);
         })
     });
