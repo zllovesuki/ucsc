@@ -1186,7 +1186,7 @@ var pdf2HTML = function(filename) {
         })
 
         pdftohtml.on('exit', function() {
-            if (errorOcc) reject();
+            if (errorOcc) reject(error);
             else resolve(html);
         })
     });
