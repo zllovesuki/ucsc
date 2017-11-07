@@ -233,7 +233,7 @@ var checkForNewTerm = function() {
     }).finally(function() {
         setTimeout(function() {
             checkForNewTerm()
-        }, 21600 * 1000) // check for new term every 6 hours
+        }, 64800 * 1000) // check for new term every 18 hours
     })
 }
 
