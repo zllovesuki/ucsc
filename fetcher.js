@@ -53,7 +53,13 @@ var self = module.exports = {
     */
     courseListTimestamp: {},
     foundTime: {},
+    profMap: {},
+    subjectMap: {},
     saveTermsList: function(termCodesToAppend) {
+        self.subjectMap = require('./db/subjects.json').reduce(function(subjectMap, row) {
+            subjectMap[row.code] = row.name
+            return subjectMap
+        }, {})
         return ucsc.getTerms().then(function(terms) {
             if (typeof termCodesToAppend !== 'undefined') {
                 termCodesToAppend.forEach(function(termCodeToAppend) {
@@ -96,13 +102,58 @@ var self = module.exports = {
                         }, { concurrency: 1 })
                     }, { concurrency: 1 })
                     .then(function() {
-                        self.courseListTimestamp[term.code] = Math.round(+new Date()/1000)
-                        return self.write('./db/terms/' + term.code + '.json', courses)
+                        // A Cluster of Fucks to overcome the problem of pisa no longer display first/last name for professor
+                        console.log('Additional step: attempt to map displayName to First/Last name via Campus Directory')
+                        for (var subject in courses) {
+                            if (typeof self.profMap[subject] === 'undefined') self.profMap[subject] = {}
+                            for (var i = 0; i < courses[subject].length; i++) {
+                                if (typeof courses[subject][i].ins === 'undefined') continue;
+                                if (typeof courses[subject][i].ins.d === 'undefined' || courses[subject][i].ins.d[0] === 'Staff') continue;
+                                if (typeof courses[subject][i].ins.l !== 'undefined') continue;
+                                if (typeof self.profMap[subject][courses[subject][i].ins.d[0]] !== 'undefined'
+                                    && self.profMap[subject][courses[subject][i].ins.d[0]] !== null) continue;
+
+                                self.profMap[subject][courses[subject][i].ins.d[0]] = null
+                            }
+                        }
+
+                        return Promise.map(Object.keys(self.profMap), function(subject) {
+                            return Promise.map(Object.keys(self.profMap[subject]), function(profDisplayName) {
+                                if (self.profMap[subject][profDisplayName] !== null) return;
+
+                                return ucsc.searchFacultyOnDirectoryByLastname(
+                                    profDisplayName.slice(0, profDisplayName.indexOf(',')),
+                                    profDisplayName.slice(profDisplayName.indexOf(',') + 1),
+                                    self.subjectMap[subject]
+                                )
+                                .then(function(result) {
+                                    if (result.bestGuess.name) {
+                                        self.profMap[subject][profDisplayName] = result.bestGuess.name
+                                    }
+                                })
+                            }, { concurrency: 1 })
+                        }, { concurrency: 1 })
                         .then(function() {
-                            console.log(term.name, 'saved to', './db/terms/' + term.code + '.json');
-                        })
-                        .then(function() {
-                            return self.write('./db/timestamp/terms/' + term.code + '.json', self.courseListTimestamp[term.code])
+                            for (var subject in courses) {
+                                for (var i = 0; i < courses[subject].length; i++) {
+                                    if (typeof courses[subject][i].ins === 'undefined') continue;
+                                    if (typeof courses[subject][i].ins.d === 'undefined' || courses[subject][i].ins.d[0] === 'Staff') continue;
+                                    if (typeof courses[subject][i].ins.l !== 'undefined') continue;
+
+                                    if (self.profMap[subject][courses[subject][i].ins.d[0]] === null) continue;
+                                    courses[subject][i].ins.l = self.profMap[subject][courses[subject][i].ins.d[0]].split(' ').slice(-1)[0]
+                                    courses[subject][i].ins.f = self.profMap[subject][courses[subject][i].ins.d[0]].split(' ').slice(0, -1)[0]
+                                }
+                            }
+
+                            self.courseListTimestamp[term.code] = Math.round(+new Date()/1000)
+                            return self.write('./db/terms/' + term.code + '.json', courses)
+                            .then(function() {
+                                console.log(term.name, 'saved to', './db/terms/' + term.code + '.json');
+                            })
+                            .then(function() {
+                                return self.write('./db/timestamp/terms/' + term.code + '.json', self.courseListTimestamp[term.code])
+                            })
                         })
                     })
                 })

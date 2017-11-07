@@ -1,6 +1,6 @@
 {
   "name": "ucsc",
-  "version": "4.5.5",
+  "version": "4.6.0",
   "description": "",
   "main": "index.js",
   "dependencies": {
@@ -21,7 +21,8 @@
     "request": "^2.83.0",
     "rethinkdb": "^2.3.3",
     "socks5-http-client": "^1.0.2",
-    "socks5-https-client": "^1.2.1"
+    "socks5-https-client": "^1.2.1",
+    "string-similarity": "^1.2.0"
   },
   "scripts": {
     "test": "node node_modules/mocha/bin/mocha --timeout 30000 --reporter spec"

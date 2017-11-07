@@ -249,12 +249,12 @@ r.connect({
             else console.log('No data found on S3, fetching fresh data...')
             // download everything...
             // then uploading everything
-            return job.saveTermsList()
+            return job.saveSubjects()
+            .then(job.saveTermsList)
             .then(job.saveCourseInfo)
             .then(job.calculateTermsStats)
             .then(job.saveGEDesc)
             .then(job.saveMaps)
-            .then(job.saveSubjects)
             .then(job.saveMajorsMinors)
             .then(job.saveFinalSchedules)
             .then(uploadEverything)
