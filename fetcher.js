@@ -144,6 +144,8 @@ var self = module.exports = {
                                         self.profMap[subject][courses[subject][i].ins.d[0]] = false
                                         continue
                                     }
+                                    if (!!!self.profMap[subject][courses[subject][i].ins.d[0]]) continue
+                                    
                                     courses[subject][i].ins.l = self.profMap[subject][courses[subject][i].ins.d[0]].split(' ').slice(-1)[0]
                                     courses[subject][i].ins.f = self.profMap[subject][courses[subject][i].ins.d[0]].split(' ').slice(0, -1)[0]
                                 }
