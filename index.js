@@ -1709,12 +1709,34 @@ var parseDirectory = function(body) {
     return context
 }
 
+var directoryCSRF = {}
+var directoryInitialSetup = false;
+
+var getDirectoryCSRF = function() {
+    if (directoryInitialSetup === false) {
+        return secureDirectoryRequest(undefined, true).then(function(body) {
+            var parsed = parseDirectory(body)
+            if (typeof parsed.CSRF === 'undefined' || typeof parsed.CSRF.token === 'undefined') {
+                return Promise.reject('No CSRF was found.')
+            }
+            directoryCSRF = parsed.CSRF
+            directoryInitialSetup = true
+            return directoryCSRF
+        })
+    }else{
+        return Promise.resolve(directoryCSRF)
+    }
+}
+
 var searchFacultyOnDirectoryByLastname = function(keyword, hint, department) {
-    return secureDirectoryRequest(undefined, true).then(function(body) {
-        var initialContext = parseDirectory(body)
-        return secureDirectoryRequest(buildDirectoryRequestData(initialContext.CSRF, keyword), true)
+    return getDirectoryCSRF().then(function(csrf) {
+        return secureDirectoryRequest(buildDirectoryRequestData(csrf, keyword), true)
         .then(function(body) {
             var context = parseDirectory(body)
+            if (typeof context.CSRF === 'undefined' || typeof context.CSRF.token === 'undefined') {
+                return Promise.reject('No CSRF was found.')
+            }
+            directoryCSRF = context.CSRF
             return matchDirectory(context, keyword, hint, department)
         })
     })
