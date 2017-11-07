@@ -55,6 +55,7 @@ var self = module.exports = {
     foundTime: {},
     profMap: {},
     subjectMap: {},
+    termRef: null,
     saveTermsList: function(termCodesToAppend) {
         self.subjectMap = require('./db/subjects.json').reduce(function(subjectMap, row) {
             subjectMap[row.code] = row.name
@@ -73,6 +74,13 @@ var self = module.exports = {
                     }
                 })
             }
+
+            self.termRef = terms.sort(function(a, b) {
+                if (a.code < b.code) return 1
+                else if (a.code > b.code) return -1
+                else return 0
+            })[0].code - 10
+
             return Promise.map(terms, function(term) {
                 self.foundTime[term.code] = false;
                 return ucsc.getCourses(term.code, 3000).then(function(courses) {
@@ -102,6 +110,7 @@ var self = module.exports = {
                         }, { concurrency: 1 })
                     }, { concurrency: 1 })
                     .then(function() {
+                        if (term.code < self.termRef) return
                         // A Cluster of Fucks to overcome the problem of pisa no longer display first/last name for professor
                         console.log('Additional step: attempt to map displayName to First/Last name via Campus Directory')
                         for (var subject in courses) {
