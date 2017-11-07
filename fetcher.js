@@ -157,15 +157,16 @@ var self = module.exports = {
                                     courses[subject][i].ins.f = self.profMap[subject][courses[subject][i].ins.d[0]].split(' ').slice(0, -1)[0]
                                 }
                             }
-
-                            self.courseListTimestamp[term.code] = Math.round(+new Date()/1000)
-                            return self.write('./db/terms/' + term.code + '.json', courses)
-                            .then(function() {
-                                console.log(term.name, 'saved to', './db/terms/' + term.code + '.json');
-                            })
-                            .then(function() {
-                                return self.write('./db/timestamp/terms/' + term.code + '.json', self.courseListTimestamp[term.code])
-                            })
+                        })
+                    })
+                    .then(function() {
+                        self.courseListTimestamp[term.code] = Math.round(+new Date()/1000)
+                        return self.write('./db/terms/' + term.code + '.json', courses)
+                        .then(function() {
+                            console.log(term.name, 'saved to', './db/terms/' + term.code + '.json');
+                        })
+                        .then(function() {
+                            return self.write('./db/timestamp/terms/' + term.code + '.json', self.courseListTimestamp[term.code])
                         })
                     })
                 })
