@@ -110,8 +110,7 @@ var self = module.exports = {
                                 if (typeof courses[subject][i].ins === 'undefined') continue;
                                 if (typeof courses[subject][i].ins.d === 'undefined' || courses[subject][i].ins.d[0] === 'Staff') continue;
                                 if (typeof courses[subject][i].ins.l !== 'undefined') continue;
-                                if (typeof self.profMap[subject][courses[subject][i].ins.d[0]] !== 'undefined'
-                                    && self.profMap[subject][courses[subject][i].ins.d[0]] !== null) continue;
+                                if (typeof self.profMap[subject][courses[subject][i].ins.d[0]] !== 'undefined') continue;
 
                                 self.profMap[subject][courses[subject][i].ins.d[0]] = null
                             }
@@ -119,7 +118,7 @@ var self = module.exports = {
 
                         return Promise.map(Object.keys(self.profMap), function(subject) {
                             return Promise.map(Object.keys(self.profMap[subject]), function(profDisplayName) {
-                                if (self.profMap[subject][profDisplayName] !== null) return;
+                                if (!!self.profMap[subject][profDisplayName]) return;
 
                                 return ucsc.searchFacultyOnDirectoryByLastname(
                                     profDisplayName.slice(0, profDisplayName.indexOf(',')),
@@ -142,10 +141,9 @@ var self = module.exports = {
 
                                     if (self.profMap[subject][courses[subject][i].ins.d[0]] === null) {
                                         self.profMap[subject][courses[subject][i].ins.d[0]] = false
-                                        continue
                                     }
                                     if (!!!self.profMap[subject][courses[subject][i].ins.d[0]]) continue
-                                    
+
                                     courses[subject][i].ins.l = self.profMap[subject][courses[subject][i].ins.d[0]].split(' ').slice(-1)[0]
                                     courses[subject][i].ins.f = self.profMap[subject][courses[subject][i].ins.d[0]].split(' ').slice(0, -1)[0]
                                 }
