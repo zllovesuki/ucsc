@@ -431,6 +431,8 @@ var self = module.exports = {
         return string.replace(/[a-z]/g, '')
     },
     saveRateMyProfessorsMappings: function(s3ReadHandler) {
+        self.instructors = []
+        self.mapping = {}
         return s3ReadHandler('/terms.json').then(function(json) {
             self.termRef = json.sort(function(a, b) {
                 if (a.code < b.code) return 1
