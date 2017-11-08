@@ -447,7 +447,7 @@ var self = module.exports = {
                         })
                     })
                 })
-            }, { concurrency: 1 })
+            }, { concurrency: 3 })
             .then(function() {
                 self.instructors = self.instructors.filter(function (o, i, s) {
                     return s.findIndex(function (t) {

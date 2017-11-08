@@ -74,42 +74,21 @@ var uploadMappings = function() {
     })
 }
 
-var shouldStartFresh = function() {
-    console.log('Check if S3 has data...')
-    return new Promise(function(resolve, reject) {
-        s3.getFile('rmp.json', function(err, res) {
-            if (err) {
-                reject(err);
-            }
-            if (res.statusCode == 404) {
-                // we should fetch all files
-                return resolve(true);
-            }
-            return resolve(false);
-        })
-    })
-}
-
-var dirtyGC = function() {
-    console.log('We will exit with code 1 and let the deamon restart us (basically a garbage collection)...')
-    process.exit(1)
-}
-
 var downloadNewMappings = function() {
     /*
         TODO: locking
     */
+    console.log('Download new mappings...')
     return job.saveRateMyProfessorsMappings(s3ReadHandler)
     .then(uploadMappings)
-    .then(dirtyGC)
     .catch(function(e) {
         console.error('Error thrown in checkForNewMappings', e)
         console.log('Continue...')
     }).finally(function() {
-        console.log('Next data fetch is 14 days later.')
+        console.log('Next data fetch is 7 days later.')
         setTimeout(function() {
             downloadNewMappings()
-        }, 1209600 * 1000) // download mappings every 14 days
+        }, 604800 * 1000) // download mappings every 7 days
     })
 }
 
@@ -135,23 +114,7 @@ r.connect({
     port: 28015
 }).then(function(conn) {
     r.conn = conn;
-    shouldStartFresh().then(function(weShould) {
-        if (weShould) {
-            // initialize everything
-            console.log('No mappings found on S3, fetching fresh data...')
-            // download everything...
-            // then uploading everything
-            return downloadNewMappings();
-        }else{
-            console.log('Mappings already populated on S3.')
-            console.log('Next data fetch is 14 days later.')
-            startStatsWorker().then(function() {
-                setTimeout(function() {
-                    downloadNewMappings()
-                }, 1209600 * 1000) // delay the fetching to 14 days later
-            })
-        }
-    })
+    return downloadNewMappings().then(startStatsWorker)
 }).catch(function(e) {
     console.error(e)
 })

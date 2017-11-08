@@ -121,11 +121,6 @@ var calculateStats = function(ratings) {
     }
 }
 
-var dirtyGC = function() {
-    console.log('We will exit with code 1 and let the deamon restart us (basically a garbage collection)...')
-    process.exit(1)
-}
-
 var rmp = {};
 
 var checkForChanges = function() {
@@ -202,10 +197,10 @@ r.connect({
 }).then(function(conn) {
     r.conn = conn;
     checkForChanges().then(function() {
-        console.log('Next data fetch is 14 days later.')
+        console.log('Next data fetch is 7 days later.')
         setTimeout(function() {
             checkForChanges()
-        }, 1209600 * 1000) // check for changes every 14 days
+        }, 604800 * 1000) // check for changes every 7 days
     })
 }).catch(function(e) {
     console.error(e)
