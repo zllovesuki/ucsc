@@ -432,7 +432,13 @@ var self = module.exports = {
     },
     saveRateMyProfessorsMappings: function(s3ReadHandler) {
         return s3ReadHandler('/terms.json').then(function(json) {
+            self.termRef = json.sort(function(a, b) {
+                if (a.code < b.code) return 1
+                else if (a.code > b.code) return -1
+                else return 0
+            })[0].code - 10
             return Promise.map(json, function(term) {
+                if (term.code < self.termRef) return
                 return s3ReadHandler('/terms/' + term.code + '.json').then(function(courses) {
                     Object.keys(courses).forEach(function(subject) {
                         courses[subject].forEach(function(course) {
