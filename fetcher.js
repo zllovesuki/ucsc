@@ -225,7 +225,7 @@ var self = module.exports = {
                             }else{
                                 console.log('No course number found, skipping...')
                             }
-                        }, { concurrency: 50 })
+                        }, { concurrency: 25 })
                     }, { concurrency: 2 })
                     .then(function() {
                         console.log('Saving term', term.name)
