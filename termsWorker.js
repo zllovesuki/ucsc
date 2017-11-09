@@ -73,6 +73,10 @@ var uploadExtra = function() {
         path.join(dbPath, 'offered', 'summer.json'),
         path.join(dbPath, 'offered', 'fall.json'),
         path.join(dbPath, 'offered', 'winter.json'),
+        path.join(dbPath, 'offered', 'ge_spring.json'),
+        path.join(dbPath, 'offered', 'ge_summer.json'),
+        path.join(dbPath, 'offered', 'ge_fall.json'),
+        path.join(dbPath, 'offered', 'ge_winter.json'),
         path.join(dbPath, 'terms.json'),
         path.join(dbPath, 'timestamp', 'terms.json'),
         path.join(dbPath, 'major-minor.json'),
@@ -223,6 +227,7 @@ var checkForNewTerm = function() {
                 return Promise.map(todoTerms, uploadOneTerm, { concurrency: 3 })
             })
             .then(job.calculateTermsStats)
+            .then(job.calculateGETermsStats)
             .then(job.saveMajorsMinors)
             .then(job.saveFinalSchedules)
             .then(uploadExtra)
@@ -254,6 +259,7 @@ r.connect({
             .then(job.saveCourseInfo)
             .then(job.calculateTermsStats)
             .then(job.saveGEDesc)
+            .then(job.calculateGETermsStats)
             .then(job.saveMaps)
             .then(job.saveMajorsMinors)
             .then(job.saveFinalSchedules)

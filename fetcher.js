@@ -336,6 +336,102 @@ var self = module.exports = {
         })
     },
 
+    geSpring: {},
+    geSummer: {},
+    geFall: {},
+    geWinter: {},
+    flatCourses: {},
+    calculateGETermsStats: function() {
+        return Promise.all([
+            self.read('./db/terms.json'),
+            self.read('./db/ge.json')
+        ]).spread(function(json, geMap) {
+            return Promise.map(json, function(term) {
+                return Promise.all([
+                    self.read('./db/terms/' + term.code + '.json'),
+                    self.read('./db/courses/' + term.code + '.json')
+                ]).spread(function(courses, courseInfo) {
+                    self.flatCourses[term.code] = {}
+                    var obj = {}
+                    Object.keys(courses).forEach(function(subject) {
+                        courses[subject].forEach(function(course) {
+                            obj = course;
+                            obj.c = [subject, course.c].join(' ');
+                            self.flatCourses[term.code][course.num] = obj;
+                        })
+                    })
+                    var course = {}, code = '', year = '', ge = []
+                    for (var courseNum in courseInfo) {
+                        course = self.flatCourses[term.code][courseNum]
+                        if (typeof course === 'undefined') continue
+                        code = course.c;
+                        year = '20' + term.code.substring(1, 3);
+                        courseInfo[courseNum].ge.forEach(function(geCode) {
+
+                            if (typeof geMap[geCode] === 'undefined') return
+
+                            switch (term.code[term.code.length - 1]) {
+                                case '0': // Winter
+
+                                if (typeof self.geWinter[geCode] === 'undefined') self.geWinter[geCode] = {}
+                                if (typeof self.geWinter[geCode][code] === 'undefined') self.geWinter[geCode][code] = {}
+                                if (typeof self.geWinter[geCode][code][year] === 'undefined') self.geWinter[geCode][code][year] = 1
+                                else self.geWinter[geCode][code][year]++
+
+                                break;
+
+                                case '2': // Spring
+
+                                if (typeof self.geSpring[geCode] === 'undefined') self.geSpring[geCode] = {}
+                                if (typeof self.geSpring[geCode][code] === 'undefined') self.geSpring[geCode][code] = {}
+                                if (typeof self.geSpring[geCode][code][year] === 'undefined') self.geSpring[geCode][code][year] = 1
+                                else self.geSpring[geCode][code][year]++
+
+                                break;
+
+                                case '4': // Summer
+
+                                if (typeof self.geSummer[geCode] === 'undefined') self.geSummer[geCode] = {}
+                                if (typeof self.geSummer[geCode][code] === 'undefined') self.geSummer[geCode][code] = {}
+                                if (typeof self.geSummer[geCode][code][year] === 'undefined') self.geSummer[geCode][code][year] = 1
+                                else self.geSummer[geCode][code][year]++
+
+                                break;
+
+                                case '8': // Fall
+
+                                if (typeof self.geFall[geCode] === 'undefined') self.geFall[geCode] = {}
+                                if (typeof self.geFall[geCode][code] === 'undefined') self.geFall[geCode][code] = {}
+                                if (typeof self.geFall[geCode][code][year] === 'undefined') self.geFall[geCode][code][year] = 1
+                                else self.geFall[geCode][code][year]++
+
+                                break;
+                            }
+                        })
+                    }
+                    self.flatCourses[term.code] = {}
+                })
+            })
+        }).then(function() {
+            var list = {
+                spring: self.geSpring,
+                summer: self.geSummer,
+                fall: self.geFall,
+                winter: self.geWinter,
+            };
+
+            return Promise.map(Object.keys(list), function(quarter) {
+                return self.write('./db/offered/ge_' + quarter + '.json', list[quarter]);
+            })
+        }).then(function() {
+            self.geSpring = {};
+            self.geSummer = {};
+            self.geFall = {};
+            self.geWinter = {};
+            self.flatCourses = {}
+        })
+    },
+
     /*
         Course offering frequency
     */
@@ -347,8 +443,8 @@ var self = module.exports = {
         return self.read('./db/terms.json').then(function(json) {
             return Promise.map(json, function(term) {
                 return self.read('./db/terms/' + term.code + '.json').then(function(courses) {
-                    return Promise.map(Object.keys(courses), function(subject) {
-                        return Promise.map(courses[subject], function(course) {
+                    for (var subject in courses) {
+                        courses[subject].forEach(function(course) {
                             var code = subject + ' ' + course.c;
                             var year = '20' + term.code.substring(1, 3);
                             switch (term.code[term.code.length - 1]) {
@@ -385,19 +481,10 @@ var self = module.exports = {
                                 break;
                             }
                         })
-                    })
+                    }
                 })
             })
         }).then(function() {
-
-            /*
-            var years = ['2004', '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016'].map(function(el) {
-                return parseInt(el);
-            })
-
-            var Table = require('cli-table');
-            */
-
             var list = {
                 spring: self.coursesSpring,
                 summer: self.coursesSummer,

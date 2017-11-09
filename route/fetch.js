@@ -36,11 +36,15 @@ router.get('/base', function(req, res, next) {
         '/offered/spring',
         '/offered/summer',
         '/offered/fall',
-        '/offered/winter'
+        '/offered/winter',
+        '/offered/ge_spring',
+        '/offered/ge_summer',
+        '/offered/ge_fall',
+        '/offered/ge_winter'
     ).run(r.conn).then(function(cursor) {
         return cursor.toArray();
     }).then(function(results) {
-        if (results.length === 9) {
+        if (results.length === 13) {
             res.setHeader('Content-Type', 'application/json');
             res.send(results.reduce(function(array, result) {
                 array[result.key.slice(result.key.lastIndexOf('/') + 1)] = JSON.parse(result.value);
