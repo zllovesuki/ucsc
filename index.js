@@ -646,7 +646,7 @@ var parseCourseDOMFromSelector = function(body) {
     // infoDom[0] is the first column; infoDom[1] is the second column
     var dd = $('dd', infoDom[0]);
     // dd[4] is # of credits; dd[5] is GE
-    if (!dd && !dd[3] && !dd[3].children) return false;
+    if (!dd || !dd[3] || !dd[3].children) return false;
     course.ty = (dd[3].children[0] ? dd[3].children[0].data : null)
     course.cr = (dd[4].children[0] ? dd[4].children[0].data.match(/\d+/g)[0] : null)
     course.ge = (dd[5].children[0] ? dd[5].children[0].data.replace(/\s/g, '').split(',') : null)
