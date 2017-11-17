@@ -61,7 +61,21 @@ var self = module.exports = {
             subjectMap[row.code] = row.name
             return subjectMap
         }, {})
-        return ucsc.getTerms().then(function(terms) {
+        var getProfMapCache = function() {
+            return self.read('./db/profMapCache.json')
+            .then(function(cache) {
+                console.log('profDisplayName cache loaded.')
+                self.profMap = cache
+            })
+            .catch(function() {
+                console.log('profDisplayName cache not found.')
+                self.profMap = {}
+            })
+        }
+        return Promise.all([
+            ucsc.getTerms(),
+            getProfMapCache()
+        ]).spread.then(function(terms, idc) {
             if (typeof termCodesToAppend !== 'undefined') {
                 termCodesToAppend.forEach(function(termCodeToAppend) {
                     if (terms.filter(function(el) {
@@ -174,6 +188,9 @@ var self = module.exports = {
                     return self.write('./db/terms.json', terms)
                     .then(function() {
                         return self.write('./db/timestamp/terms.json', Math.round(+new Date()/1000));
+                    })
+                    .then(function() {
+                        return self.write('./db/profMapCache.json', self.profMap)
                     })
                 })
                 .catch(function(e) {
