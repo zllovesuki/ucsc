@@ -364,7 +364,7 @@ var self = module.exports = {
                     for (var courseNum in courseInfo) {
                         course = self.flatCourses[term.code][courseNum]
                         if (typeof course === 'undefined') continue
-                        code = course.c;
+                        code = course.c + ' - ' + course.s;
                         year = '20' + term.code.substring(1, 3);
                         courseInfo[courseNum].ge.forEach(function(geCode) {
 
@@ -445,7 +445,7 @@ var self = module.exports = {
                 return self.read('./db/terms/' + term.code + '.json').then(function(courses) {
                     for (var subject in courses) {
                         courses[subject].forEach(function(course) {
-                            var code = subject + ' ' + course.c;
+                            var code = subject + ' ' + course.c + ' - ' + course.s;
                             var year = '20' + term.code.substring(1, 3);
                             switch (term.code[term.code.length - 1]) {
                                 case '0': // Winter
