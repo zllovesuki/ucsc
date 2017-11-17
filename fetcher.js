@@ -75,7 +75,7 @@ var self = module.exports = {
         return Promise.all([
             ucsc.getTerms(),
             getProfMapCache()
-        ]).spread.then(function(terms, idc) {
+        ]).spread(function(terms, idc) {
             if (typeof termCodesToAppend !== 'undefined') {
                 termCodesToAppend.forEach(function(termCodeToAppend) {
                     if (terms.filter(function(el) {
