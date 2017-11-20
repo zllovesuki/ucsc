@@ -44,8 +44,10 @@ discover().then(function(ip) {
         })
     }
 
-    Promise.all([
-        r.connect(config.rethinkdb),
+    return Promise.all([
+        r.connect({
+            host: config.host
+        }),
         r.connect({
             host: ip
         })
