@@ -40,7 +40,9 @@ discover().then(function(ip) {
             if (now !== lastConnected) {
                 lastConnectedChanged = true;
             }
-            setTimeout(compareTimeConnected, 1000 * 10);
+            setTimeout(function() {
+                compareTimeConnected(conn)
+            }, 1000 * 10);
         })
     }
 
