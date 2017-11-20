@@ -87,7 +87,7 @@ discover().then(function(ip) {
 
         app.listen(1999);
 
-        r.table('data')
+        r.db('data')
         .table('flat')
         .changes({
             includeInitial: true,
