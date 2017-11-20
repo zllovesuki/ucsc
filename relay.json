@@ -1,0 +1,9 @@
+{
+    "apps": [
+        {
+            "name": "ucsc-data-relay",
+            "script": "relay.js",
+            "watch": true
+        }
+    ]
+}
