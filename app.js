@@ -1,7 +1,8 @@
 var endpointChanged = false
 
 module.exports = function(r, endpoint) {
-	var express = require('express'),
+	var Promise = require('bluebird'),
+        express = require('express'),
 		path = require('path'),
 		cors = require('cors'),
         config = require('./config'),
@@ -28,7 +29,6 @@ module.exports = function(r, endpoint) {
 
     // r.db('ucsc').table('2168').group('courseNum').count().ungroup().orderBy(r.desc("reduction"))
 
-    app.use('/', cors(corsDelegation), fetch);
     app.use('/help', help);
 
     app.use('/healthz', function(req, res, next) {
@@ -38,10 +38,10 @@ module.exports = function(r, endpoint) {
         }
         Promise.all([
             discover(),
-            r.table('domains', {
+            r.db('data').table('flat', {
                 readMode: 'majority'
-            }).run(r.conn)
-        ]).spread(function(ip, domains) {
+            }).limit(1).run(r.conn)
+        ]).spread(function(ip, flat) {
             if (endpoint !== false && ip !== endpoint) {
                 endpointChanged = true;
                 throw new Error('Endpoint changed.')
@@ -51,6 +51,8 @@ module.exports = function(r, endpoint) {
             next(e)
         })
     });
+
+    app.use('/', cors(corsDelegation), fetch);
 
 	// catch 404 and forward to error handler
 	app.use(function(req, res, next) {
