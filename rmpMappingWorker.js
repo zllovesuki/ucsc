@@ -81,13 +81,25 @@ var downloadNewMappings = function() {
     console.log('Download new mappings...')
     return job.saveRateMyProfessorsMappings(s3ReadHandler)
     .then(function() {
-        return r.connect({
-            host: config.host,
-            port: 28015
-        }).then(function(conn) {
-            r.conn = conn;
-            return uploadMappings()
-        }).then(function() {
+        var onDemandUpload = function() {
+            return r.connect({
+                host: config.host,
+                port: 28015
+            }).then(function(conn) {
+                r.conn = conn
+                return uploadMappings()
+            })
+        }
+        var tryUploading = function() {
+            return onDemandUpload()
+            .catch(function(e) {
+                console.error('Error thrown in onDemandUpload', e)
+                console.log('Retrying...')
+                return tryUploading()
+            })
+        }
+        return tryUploading()
+        .then(function() {
             return r.conn.close()
         })
     })

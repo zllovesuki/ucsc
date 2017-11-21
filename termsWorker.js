@@ -226,20 +226,31 @@ var checkForNewTerm = function() {
             .then(function() {
                 return job.saveCourseInfo(todoTerms)
             })
-            .then(function() {
-                return r.connect({
-                    host: config.host,
-                    port: 28015
-                }).then(function(conn) {
-                    r.conn = conn
-                    return Promise.map(todoTerms, uploadOneTerm, { concurrency: 3 })
-                })
-            })
             .then(job.calculateTermsStats)
             .then(job.calculateGETermsStats)
             .then(job.saveMajorsMinors)
             .then(job.saveFinalSchedules)
-            .then(uploadExtra)
+            .then(function() {
+                var onDemandUpload = function() {
+                    return r.connect({
+                        host: config.host,
+                        port: 28015
+                    }).then(function(conn) {
+                        r.conn = conn
+                        return Promise.map(todoTerms, uploadOneTerm, { concurrency: 3 })
+                        .then(uploadExtra)
+                    })
+                }
+                var tryUploading = function() {
+                    return onDemandUpload()
+                    .catch(function(e) {
+                        console.error('Error thrown in onDemandUpload (existed)', e)
+                        console.log('Retrying...')
+                        return tryUploading()
+                    })
+                }
+                return tryUploading()
+            })
             .then(function() {
                 return r.conn.close()
             })
@@ -271,13 +282,24 @@ shouldStartFresh().then(function(weShould) {
         .then(job.saveMajorsMinors)
         .then(job.saveFinalSchedules)
         .then(function() {
-            return r.connect({
-                host: config.host,
-                port: 28015
-            }).then(function(conn) {
-                r.conn = conn
-                return uploadEverything()
-            })
+            var onDemandUpload = function() {
+                return r.connect({
+                    host: config.host,
+                    port: 28015
+                }).then(function(conn) {
+                    r.conn = conn
+                    return uploadEverything()
+                })
+            }
+            var tryUploading = function() {
+                return onDemandUpload()
+                .catch(function(e) {
+                    console.error('Error thrown in onDemandUpload (fresh)', e)
+                    console.log('Retrying...')
+                    return tryUploading()
+                })
+            }
+            return tryUploading()
         })
         .then(dirtyGC)
         .catch(function(e) {
