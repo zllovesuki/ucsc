@@ -5,12 +5,9 @@ var r = require('rethinkdb'),
 
 discover().then(function(ip) {
     if (ip !== null) {
-        config.host = ip;
+        config.rethinkdb.host = ip;
     }
-    r.connect({
-        host: config.host,
-        port: 28015
-    })
+    r.connect(config.rethinkdb)
     .then(function(conn) {
         r.conn = conn;
         var app = require('./app')(r, endpoint);

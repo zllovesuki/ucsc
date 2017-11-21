@@ -25,7 +25,7 @@ var upload = function(source, conn) {
                     return reject(err);
                 }
                 console.log(source, 'uploaded')
-                r.db('data').table('flat').insert({
+                r.table('flat').insert({
                     key: source.substring(source.indexOf('db') + 2).slice(0, -5),
                     value: fs.readFileSync(source).toString('utf-8')
                 }, {
@@ -138,10 +138,7 @@ var checkForChanges = function() {
                 return Promise.map(Object.keys(courses), function(subject) {
                     // each subject will open a new connection
                     var onDemandUpload = function() {
-                        return r.connect({
-                            host: config.host,
-                            port: 28015
-                        }).then(function(conn) {
+                        return r.connect(config.rethinkdb).then(function(conn) {
                             return Promise.map(courses[subject], function(course) {
                                 if (!(course.ins.f && course.ins.l)) {
                                     //console.log('No ins name found, skipping...')

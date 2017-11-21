@@ -1,6 +1,5 @@
 module.exports = {
     corsWhitelist: process.env.CORS ? process.env.CORS.split(',') : [],
-    host: process.env.RETHINKDB_HOST || require('./config/config.json').host,
-    s3: process.env.S3 ? JSON.parse(process.env.S3) : require('./config/config.json').s3,
-    redis: process.env.REDIS_HOST ? process.env.REDIS_HOST : require('./config/config.json').redis
+    rethinkdb: process.env.RETHINKDB ? JSON.parse(process.env.RETHINKDB) : require('./config/config.json').rethinkdb,
+    s3: process.env.S3 ? JSON.parse(process.env.S3) : require('./config/config.json').s3
 }

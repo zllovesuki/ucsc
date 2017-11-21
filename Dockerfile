@@ -13,5 +13,3 @@ WORKDIR /usr/src/app
 COPY . /usr/src/app
 
 EXPOSE 2009
-
-CMD ["pm2", "start", "server.json", "--no-daemon"]

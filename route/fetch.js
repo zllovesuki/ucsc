@@ -3,7 +3,7 @@ var express = require('express'),
 
 router.get('/timestamp/base', function(req, res, next) {
     var r = req.r;
-    r.db('data').table('flat').getAll(
+    r.table('flat').getAll(
         '/timestamp/terms',
         '/timestamp/rmp',
         '/timestamp/subjects',
@@ -27,7 +27,7 @@ router.get('/timestamp/base', function(req, res, next) {
 
 router.get('/base', function(req, res, next) {
     var r = req.r;
-    r.db('data').table('flat').getAll(
+    r.table('flat').getAll(
         '/final',
         '/terms',
         '/rmp',
@@ -62,7 +62,7 @@ router.get('/timestamp/term/:termId', function(req, res, next) {
     var r = req.r;
     var termId = req.params.termId || '';
     termId = termId.slice(-5) === '.json' ? termId.slice(0, -5) : termId;
-    r.db('data').table('flat').getAll(
+    r.table('flat').getAll(
         '/timestamp/terms/' + termId,
         '/timestamp/courses/' + termId
     ).run(r.conn).then(function(cursor) {
@@ -87,7 +87,7 @@ router.get('/term/:termId', function(req, res, next) {
     var r = req.r;
     var termId = req.params.termId || '';
     termId = termId.slice(-5) === '.json' ? termId.slice(0, -5) : termId;
-    r.db('data').table('flat').getAll(
+    r.table('flat').getAll(
         '/terms/' + termId,
         '/courses/' + termId
     ).run(r.conn).then(function(cursor) {
@@ -112,7 +112,7 @@ router.get('/:filename', function(req, res, next) {
     var r = req.r;
     var filename = req.params.filename || '';
     filename = filename.slice(-5) === '.json' ? filename.slice(0, -5) : filename;
-    r.db('data').table('flat').get('/' + filename).run(r.conn).then(function(result) {
+    r.table('flat').get('/' + filename).run(r.conn).then(function(result) {
         if (result !== null) {
             res.setHeader('Content-Type', 'application/json');
             res.send(JSON.parse(result.value));
@@ -128,7 +128,7 @@ router.get('/rmp/:tid', function(req, res, next) {
     var r = req.r;
     var tid = req.params.tid || '';
     tid = tid.slice(-5) === '.json' ? tid.slice(0, -5) : tid;
-    r.db('data').table('flat').getAll(
+    r.table('flat').getAll(
         //'/rmp/ratings/' + tid,
         '/rmp/scores/' + tid,
         '/rmp/stats/' + tid

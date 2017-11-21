@@ -25,7 +25,7 @@ var upload = function(source) {
                     return reject(err);
                 }
                 console.log(source, 'uploaded')
-                r.db('data').table('flat').insert({
+                r.table('flat').insert({
                     key: source.substring(source.indexOf('db') + 2).slice(0, -5),
                     value: fs.readFileSync(source).toString('utf-8')
                 }, {
@@ -109,10 +109,7 @@ var uploadOneTerm = function(code) {
     })
 }
 
-r.connect({
-    host: config.host,
-    port: 28015
-}).then(function(conn) {
+r.connect(config.rethinkdb).then(function(conn) {
     r.conn = conn;
     var termRef = null
     var foundTime = {}

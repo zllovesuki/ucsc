@@ -27,8 +27,6 @@ module.exports = function(r, endpoint) {
         callback(null, corsOptions);
     }
 
-    // r.db('ucsc').table('2168').group('courseNum').count().ungroup().orderBy(r.desc("reduction"))
-
     app.use('/help', help);
 
     app.use('/healthz', function(req, res, next) {
@@ -38,7 +36,7 @@ module.exports = function(r, endpoint) {
         }
         Promise.all([
             discover(),
-            r.db('data').table('flat', {
+            r.table('flat', {
                 readMode: 'majority'
             }).limit(1).run(r.conn)
         ]).spread(function(ip, flat) {
