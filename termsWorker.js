@@ -87,6 +87,9 @@ var uploadExtra = function() {
     return Promise.mapSeries(files, function(file) {
         return upload(file);
     })
+    .then(function() {
+        r.conn.close()
+    })
 }
 
 var uploadOneTerm = function(code) {
@@ -230,7 +233,17 @@ var checkForNewTerm = function() {
             .then(job.calculateGETermsStats)
             .then(job.saveMajorsMinors)
             .then(job.saveFinalSchedules)
-            .then(uploadExtra)
+            .then(function() {
+                return r.connect({
+                    host: config.host,
+                    port: 28015
+                }).then(function(conn) {
+                    r.conn = conn
+                    return uploadExtra()
+                }).then(function() {
+                    r.conn.close()
+                })
+            })
         })
     }).catch(function(e) {
         console.error('Error thrown in checkForNewTerm', e)
@@ -242,35 +255,39 @@ var checkForNewTerm = function() {
     })
 }
 
-r.connect({
-    host: config.host,
-    port: 28015
-}).then(function(conn) {
-    r.conn = conn;
-    shouldStartFresh().then(function(weShould) {
-        if (weShould || !!process.env.FRESH) {
-            // initialize everything
-            if (!!process.env.FRESH) console.log('Forced fresh start')
-            else console.log('No data found on S3, fetching fresh data...')
-            // download everything...
-            // then uploading everything
-            return job.saveSubjects()
-            .then(job.saveTermsList)
-            .then(job.saveCourseInfo)
-            .then(job.calculateTermsStats)
-            .then(job.saveGEDesc)
-            .then(job.calculateGETermsStats)
-            .then(job.saveMaps)
-            .then(job.saveMajorsMinors)
-            .then(job.saveFinalSchedules)
-            .then(uploadEverything)
-            .then(dirtyGC)
-        }else{
-            console.log('Data already populated on S3.')
-        }
-    }).then(function() {
-        checkForNewTerm();
-    })
-}).catch(function(e) {
-    console.error(e)
+shouldStartFresh().then(function(weShould) {
+    if (weShould || !!process.env.FRESH) {
+        // initialize everything
+        if (!!process.env.FRESH) console.log('Forced fresh start')
+        else console.log('No data found on S3, fetching fresh data...')
+        // download everything...
+        // then uploading everything
+        return job.saveSubjects()
+        .then(job.saveTermsList)
+        .then(job.saveCourseInfo)
+        .then(job.calculateTermsStats)
+        .then(job.saveGEDesc)
+        .then(job.calculateGETermsStats)
+        .then(job.saveMaps)
+        .then(job.saveMajorsMinors)
+        .then(job.saveFinalSchedules)
+        .then(function() {
+            return r.connect({
+                host: config.host,
+                port: 28015
+            }).then(function(conn) {
+                r.conn = conn
+                return uploadEverything()
+            })
+        })
+        .then(dirtyGC)
+        .catch(function(e) {
+            console.error('Error thrown in startFresh', e)
+            process.exit(1)
+        })
+    }else{
+        console.log('Data already populated on S3.')
+    }
+}).then(function() {
+    checkForNewTerm();
 })
