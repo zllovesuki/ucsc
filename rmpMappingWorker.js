@@ -80,7 +80,17 @@ var downloadNewMappings = function() {
     */
     console.log('Download new mappings...')
     return job.saveRateMyProfessorsMappings(s3ReadHandler)
-    .then(uploadMappings)
+    .then(function() {
+        return r.connect({
+            host: config.host,
+            port: 28015
+        }).then(function(conn) {
+            r.conn = conn;
+            return uploadMappings()
+        }).then(function() {
+            return r.conn.close()
+        })
+    })
     .catch(function(e) {
         console.error('Error thrown in checkForNewMappings', e)
         console.log('Continue...')
@@ -109,12 +119,4 @@ var startStatsWorker = function() {
     });
 }
 
-r.connect({
-    host: config.host,
-    port: 28015
-}).then(function(conn) {
-    r.conn = conn;
-    return downloadNewMappings().then(startStatsWorker)
-}).catch(function(e) {
-    console.error(e)
-})
+downloadNewMappings().then(startStatsWorker)
