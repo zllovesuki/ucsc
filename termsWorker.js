@@ -227,22 +227,21 @@ var checkForNewTerm = function() {
                 return job.saveCourseInfo(todoTerms)
             })
             .then(function() {
-                return Promise.map(todoTerms, uploadOneTerm, { concurrency: 3 })
-            })
-            .then(job.calculateTermsStats)
-            .then(job.calculateGETermsStats)
-            .then(job.saveMajorsMinors)
-            .then(job.saveFinalSchedules)
-            .then(function() {
                 return r.connect({
                     host: config.host,
                     port: 28015
                 }).then(function(conn) {
                     r.conn = conn
-                    return uploadExtra()
-                }).then(function() {
-                    r.conn.close()
+                    return Promise.map(todoTerms, uploadOneTerm, { concurrency: 3 })
                 })
+            })
+            .then(job.calculateTermsStats)
+            .then(job.calculateGETermsStats)
+            .then(job.saveMajorsMinors)
+            .then(job.saveFinalSchedules)
+            .then(uploadExtra)
+            .then(function() {
+                return r.conn.close()
             })
         })
     }).catch(function(e) {
