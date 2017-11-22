@@ -204,8 +204,6 @@ var publishSanity = function() {
     });
 }
 
-return publishSanity()
-
 var checkForNewTerm = function() {
     /*
         TODO: locking
