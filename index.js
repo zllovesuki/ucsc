@@ -697,7 +697,7 @@ var parseCourseDOMFromSelector = function(body) {
                 sectionDom = $('.row', bodyDom[i]);
             }
             if (searchString.indexOf('meeting') !== -1) {
-                meetingInfoDom = $('table > tr', bodyDom[i]);
+                meetingInfoDom = $('tr', bodyDom[i]);
             }
 
             if (searchString.indexOf('description') !== -1) {
