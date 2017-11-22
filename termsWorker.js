@@ -5,6 +5,8 @@ var config = require('./config');
 var path = require('path');
 var fs = require('fs')
 var r = require('rethinkdb')
+var stan = null;
+var ON_DEATH = require('death')({uncaughtException: true});
 
 var s3 = knox.createClient(Object.assign(config.s3, {
     style: 'path'
@@ -173,6 +175,37 @@ var delta = function(termCode) {
     }
 }
 
+var publishSanity = function() {
+    return new Promise(function(resolve, reject) {
+        console.log('Connecting to queue...')
+        stan = require('node-nats-streaming').connect('persistent-queue', 'ucsc-data', {
+            'servers': config.nats
+        });
+
+        stan.on('error', function(e) {
+            reject(e)
+        })
+
+        stan.on('connect', function() {
+            stan.publish('requestSanity', 'true', function(err, guid) {
+                if (err) {
+                    return reject(err)
+                }
+                console.log('requestSanity published.')
+
+                stan.close()
+
+                stan.on('close', function() {
+                    stan = null
+                    resolve()
+                })
+            })
+        })
+    });
+}
+
+return publishSanity()
+
 var checkForNewTerm = function() {
     /*
         TODO: locking
@@ -251,6 +284,17 @@ var checkForNewTerm = function() {
             .then(function() {
                 return r.conn.close()
             })
+            .then(function() {
+                var tryPublishing = function() {
+                    return publishSanity()
+                    .catch(function(e) {
+                        console.error('Error thrown in tryPublishing', e)
+                        console.log('Retrying...')
+                        return tryPublishing()
+                    })
+                }
+                return tryPublishing()
+            })
         })
     }).catch(function(e) {
         console.error('Error thrown in checkForNewTerm', e)
@@ -263,10 +307,9 @@ var checkForNewTerm = function() {
 }
 
 shouldStartFresh().then(function(weShould) {
-    if (weShould || !!process.env.FRESH) {
+    if (weShould) {
         // initialize everything
-        if (!!process.env.FRESH) console.log('Forced fresh start')
-        else console.log('No data found on S3, fetching fresh data...')
+        console.log('No data found on S3, fetching fresh data...')
         // download everything...
         // then uploading everything
         return job.saveSubjects()
@@ -305,4 +348,13 @@ shouldStartFresh().then(function(weShould) {
     }
 }).then(function() {
     checkForNewTerm();
+})
+
+ON_DEATH(function(signal, err) {
+    if (stan !== null) {
+        stan.close();
+        stan.on('close', function() {
+            process.exit()
+        });
+    }
 })
