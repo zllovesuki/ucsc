@@ -6,6 +6,7 @@ var r = require('rethinkdb'),
 discover().then(function(ip) {
     if (ip !== null) {
         config.rethinkdb.host = ip;
+        endpoint = ip;
     }
     r.connect(config.rethinkdb)
     .then(function(conn) {
