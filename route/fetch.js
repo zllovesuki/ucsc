@@ -1,60 +1,64 @@
-var express = require('express'),
+var Promise = require('bluebird'),
+    express = require('express'),
     router = express.Router();
 
 router.get('/timestamp/base', function(req, res, next) {
-    var r = req.r;
-    r.table('flat').getAll(
-        '/timestamp/terms',
-        '/timestamp/rmp',
-        '/timestamp/subjects',
-        '/timestamp/major-minor'
-    ).run(r.conn).then(function(cursor) {
-        return cursor.toArray();
-    }).then(function(results) {
-        if (results.length > 0) {
-            res.setHeader('Content-Type', 'application/json');
-            res.send(results.reduce(function(array, result) {
-                array[result.key.slice(result.key.lastIndexOf('/') + 1)] = JSON.parse(result.value);
-                return array;
-            }, {}))
-        }else{
-            var error = new Error('Not found');
-            error.responseCode = 404;
-            next(error)
-        }
+    Promise.all([
+        req.getObject('timestamp/terms.json'),
+        req.getObject('timestamp/rmp.json'),
+        req.getObject('timestamp/subjects.json'),
+        req.getObject('timestamp/major-minor.json')
+    ]).then(function(results) {
+        res.setHeader('Content-Type', 'application/json');
+        res.send({
+            terms: JSON.parse(results[0]),
+            rmp: JSON.parse(results[1]),
+            subjects: JSON.parse(results[2]),
+            'major-minor': JSON.parse(results[3])
+        })
+    }).catch(function() {
+        var error = new Error('Internal Server Error');
+        error.responseCode = 500;
+        next(error)
     })
 })
 
 router.get('/base', function(req, res, next) {
-    var r = req.r;
-    r.table('flat').getAll(
-        '/final',
-        '/terms',
-        '/rmp',
-        '/subjects',
-        '/major-minor',
-        '/offered/spring',
-        '/offered/summer',
-        '/offered/fall',
-        '/offered/winter',
-        '/offered/ge_spring',
-        '/offered/ge_summer',
-        '/offered/ge_fall',
-        '/offered/ge_winter'
-    ).run(r.conn).then(function(cursor) {
-        return cursor.toArray();
-    }).then(function(results) {
-        if (results.length === 13) {
-            res.setHeader('Content-Type', 'application/json');
-            res.send(results.reduce(function(array, result) {
-                array[result.key.slice(result.key.lastIndexOf('/') + 1)] = JSON.parse(result.value);
-                return array;
-            }, {}))
-        }else{
-            var error = new Error('Not found');
-            error.responseCode = 404;
-            next(error)
-        }
+    Promise.all([
+        req.getObject('final.json'),
+        req.getObject('terms.json'),
+        req.getObject('rmp.json'),
+        req.getObject('subjects.json'),
+        req.getObject('major-minor.json'),
+        req.getObject('offered/spring.json'),
+        req.getObject('offered/summer.json'),
+        req.getObject('offered/fall.json'),
+        req.getObject('offered/winter.json'),
+        req.getObject('offered/ge_spring.json'),
+        req.getObject('offered/ge_summer.json'),
+        req.getObject('offered/ge_fall.json'),
+        req.getObject('offered/ge_winter.json')
+    ]).then(function(results) {
+        res.setHeader('Content-Type', 'application/json');
+        res.send({
+            final: JSON.parse(results[0]),
+            terms: JSON.parse(results[1]),
+            rmp: JSON.parse(results[2]),
+            subjects: JSON.parse(results[3]),
+            'major-minor': JSON.parse(results[4]),
+            spring: JSON.parse(results[5]),
+            summer: JSON.parse(results[6]),
+            fall: JSON.parse(results[7]),
+            winter: JSON.parse(results[8]),
+            ge_spring: JSON.parse(results[9]),
+            ge_summer: JSON.parse(results[10]),
+            ge_fall: JSON.parse(results[11]),
+            ge_winter: JSON.parse(results[12])
+        })
+    }).catch(function() {
+        var error = new Error('Internal Server Error');
+        error.responseCode = 500;
+        next(error)
     })
 })
 

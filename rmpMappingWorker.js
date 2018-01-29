@@ -5,7 +5,6 @@ var config = require('./config');
 var path = require('path');
 var fs = require('fs')
 var pm2 = require('pm2')
-var r = require('rethinkdb')
 
 var s3 = knox.createClient(Object.assign(config.s3, {
     style: 'path'
@@ -27,17 +26,7 @@ var upload = function(source) {
                     return reject(err);
                 }
                 console.log(source, 'uploaded')
-                r.table('flat').insert({
-                    key: source.substring(source.indexOf('db') + 2).slice(0, -5),
-                    value: fs.readFileSync(source).toString('utf-8')
-                }, {
-                    conflict: 'replace'
-                }).run(r.conn).then(function(resilt) {
-                    console.log(source, 'saved to database')
-                    return resolve();
-                }).catch(function(e) {
-                    return reject(e)
-                })
+                resolve()
             })
         })
     });
@@ -82,10 +71,7 @@ var downloadNewMappings = function() {
     return job.saveRateMyProfessorsMappings(s3ReadHandler)
     .then(function() {
         var onDemandUpload = function() {
-            return r.connect(config.rethinkdb).then(function(conn) {
-                r.conn = conn
-                return uploadMappings()
-            })
+            return uploadMappings()
         }
         var tryUploading = function() {
             return onDemandUpload()
@@ -96,9 +82,6 @@ var downloadNewMappings = function() {
             })
         }
         return tryUploading()
-        .then(function() {
-            return r.conn.close()
-        })
     })
     .catch(function(e) {
         console.error('Error thrown in checkForNewMappings', e)

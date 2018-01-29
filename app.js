@@ -1,19 +1,40 @@
-var endpointChanged = false
-
-module.exports = function(r, endpoint) {
+module.exports = function() {
 	var Promise = require('bluebird'),
         express = require('express'),
 		path = require('path'),
 		cors = require('cors'),
         config = require('./config'),
-        discover = require('./lib/discover'),
+        Minio = require('minio'),
         version = require('./version.json'),
 		app = express(),
         fetch = require('./route/fetch'),
         help = require('./route/help');
 
     app.use(function(req, res, next){
-		req.r = r;
+        // backward compatibility
+		req.minioClient = new Minio.Client({
+            endPoint: config.s3.endpoint,
+            port: (typeof config.s3.port === 'undefined' ? 443 : config.s3.port),
+            secure: typeof config.s3.secure === 'undefined' ? true : config.s3.secure,
+            accessKey: config.s3.key,
+            secretKey: config.s3.secret
+        })
+        req.getObject = function(path) {
+            return new Promise(function(resolve, reject) {
+                req.minioClient.getObject(config.s3.bucket, path, function(err, dataStream) {
+                    if (err) {
+                        return reject(err)
+                    }
+                    let data = ''
+                    dataStream.on('data', function(chunk) {
+                        data += chunk
+                    })
+                    dataStream.on('end', function() {
+                        resolve(data)
+                    })
+                })
+            });
+        }
 		next();
 	});
 
@@ -30,24 +51,7 @@ module.exports = function(r, endpoint) {
     app.use('/help', help);
 
     app.use('/healthz', function(req, res, next) {
-        var r = req.r;
-        if (endpointChanged) {
-            return next(new Error('Endpoint changed.'))
-        }
-        Promise.all([
-            discover(),
-            r.table('flat', {
-                readMode: 'majority'
-            }).limit(1).run(r.conn)
-        ]).spread(function(ip, flat) {
-            if (endpoint !== false && ip !== endpoint) {
-                endpointChanged = true;
-                throw new Error('Endpoint changed.')
-            }
-            return res.status(200).send('ok')
-        }).catch(function(e) {
-            next(e)
-        })
+        res.status(200).send('ok')
     });
 
     app.use('/', cors(corsDelegation), fetch);

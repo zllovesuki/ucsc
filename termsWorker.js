@@ -4,7 +4,6 @@ var knox = require('knox');
 var config = require('./config');
 var path = require('path');
 var fs = require('fs')
-var r = require('rethinkdb')
 var stan = null;
 var ON_DEATH = require('death')({uncaughtException: true});
 
@@ -27,17 +26,7 @@ var upload = function(source) {
                     return reject(err);
                 }
                 console.log(source, 'uploaded')
-                r.table('flat').insert({
-                    key: source.substring(source.indexOf('db') + 2).slice(0, -5),
-                    value: fs.readFileSync(source).toString('utf-8')
-                }, {
-                    conflict: 'replace'
-                }).run(r.conn).then(function(resilt) {
-                    console.log(source, 'saved to database')
-                    return resolve();
-                }).catch(function(e) {
-                    return reject(e)
-                })
+                resolve()
             })
         })
     });
@@ -88,9 +77,6 @@ var uploadExtra = function() {
     ]
     return Promise.mapSeries(files, function(file) {
         return upload(file);
-    })
-    .then(function() {
-        r.conn.close()
     })
 }
 
@@ -263,11 +249,8 @@ var checkForNewTerm = function() {
             .then(job.saveFinalSchedules)
             .then(function() {
                 var onDemandUpload = function() {
-                    return r.connect(config.rethinkdb).then(function(conn) {
-                        r.conn = conn
-                        return Promise.map(todoTerms, uploadOneTerm, { concurrency: 3 })
-                        .then(uploadExtra)
-                    })
+                    return Promise.map(todoTerms, uploadOneTerm, { concurrency: 3 })
+                    .then(uploadExtra)
                 }
                 var tryUploading = function() {
                     return onDemandUpload()
@@ -278,9 +261,6 @@ var checkForNewTerm = function() {
                     })
                 }
                 return tryUploading()
-            })
-            .then(function() {
-                return r.conn.close()
             })
             .then(function() {
                 var tryPublishing = function() {
@@ -321,10 +301,7 @@ shouldStartFresh().then(function(weShould) {
         .then(job.saveFinalSchedules)
         .then(function() {
             var onDemandUpload = function() {
-                return r.connect(config.rethinkdb).then(function(conn) {
-                    r.conn = conn
-                    return uploadEverything()
-                })
+                return uploadEverything()
             }
             var tryUploading = function() {
                 return onDemandUpload()

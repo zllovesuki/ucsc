@@ -4,7 +4,6 @@ var knox = require('knox');
 var config = require('./config');
 var path = require('path');
 var fs = require('fs')
-var r = require('rethinkdb')
 
 var s3 = knox.createClient(Object.assign(config.s3, {
     style: 'path'
@@ -12,7 +11,7 @@ var s3 = knox.createClient(Object.assign(config.s3, {
 var db = __dirname + '/db',
     dbPath = path.resolve(db);
 
-var upload = function(source, conn) {
+var upload = function(source) {
     return new Promise(function(resolve, reject) {
         console.log('Uploading', source)
         fs.stat(source, function(err, stat) {
@@ -25,23 +24,13 @@ var upload = function(source, conn) {
                     return reject(err);
                 }
                 console.log(source, 'uploaded')
-                r.table('flat').insert({
-                    key: source.substring(source.indexOf('db') + 2).slice(0, -5),
-                    value: fs.readFileSync(source).toString('utf-8')
-                }, {
-                    conflict: 'replace'
-                }).run(conn).then(function(resilt) {
-                    console.log(source, 'saved to database')
-                    return resolve();
-                }).catch(function(e) {
-                    return reject(e)
-                })
+                resolve()
             })
         })
     });
 }
 
-var uploadOneTid = function(tid, conn) {
+var uploadOneTid = function(tid) {
     console.log('Uploading tid', tid)
     var files = [
         path.join(dbPath, 'rmp', 'ratings', tid + '.json'),
@@ -50,7 +39,7 @@ var uploadOneTid = function(tid, conn) {
         path.join(dbPath, 'timestamp', 'rmp', tid + '.json'),
     ]
     return Promise.mapSeries(files, function(file) {
-        return upload(file, conn);
+        return upload(file);
     })
 }
 
@@ -136,62 +125,56 @@ var checkForChanges = function() {
         return Promise.map(json, function(term) {
             return s3ReadHandler('terms/' + term.code + '.json').then(function(courses) {
                 return Promise.map(Object.keys(courses), function(subject) {
-                    // each subject will open a new connection
                     var onDemandUpload = function() {
-                        return r.connect(config.rethinkdb).then(function(conn) {
-                            return Promise.map(courses[subject], function(course) {
-                                if (!(course.ins.f && course.ins.l)) {
-                                    //console.log('No ins name found, skipping...')
+                        return Promise.map(courses[subject], function(course) {
+                            if (!(course.ins.f && course.ins.l)) {
+                                //console.log('No ins name found, skipping...')
+                                return;
+                            }
+                            if (typeof mapping[course.ins.f + course.ins.l] === 'undefined') {
+                                //console.log('No mappings found, skipping...')
+                                return;
+                            }
+                            var tid = mapping[course.ins.f + course.ins.l];
+                            if (typeof rmp[course.ins.f + course.ins.l] !== 'undefined') return;
+                            rmp[course.ins.f + course.ins.l] = true;
+                            return Promise.all([
+                                getScoresOnS3(tid),
+                                job.ucsc.getRateMyProfessorScoresByTid(tid)
+                            ]).spread(function(s3Scores, rmpScores) {
+                                if (typeof s3Scores.count === 'undefined' && typeof rmpScores.scores.count === 'undefined') {
+                                    // not found on s3 or no ratings, and rmp returns no new data
                                     return;
                                 }
-                                if (typeof mapping[course.ins.f + course.ins.l] === 'undefined') {
-                                    //console.log('No mappings found, skipping...')
+                                if (typeof s3Scores.count !== 'undefined' && typeof rmpScores.scores.count === 'undefined') {
+                                    // weird, s3 has count but new data has no dat, we will skip it
                                     return;
                                 }
-                                var tid = mapping[course.ins.f + course.ins.l];
-                                if (typeof rmp[course.ins.f + course.ins.l] !== 'undefined') return;
-                                rmp[course.ins.f + course.ins.l] = true;
-                                return Promise.all([
-                                    getScoresOnS3(tid),
-                                    job.ucsc.getRateMyProfessorScoresByTid(tid)
-                                ]).spread(function(s3Scores, rmpScores) {
-                                    if (typeof s3Scores.count === 'undefined' && typeof rmpScores.scores.count === 'undefined') {
-                                        // not found on s3 or no ratings, and rmp returns no new data
-                                        return;
-                                    }
-                                    if (typeof s3Scores.count !== 'undefined' && typeof rmpScores.scores.count === 'undefined') {
-                                        // weird, s3 has count but new data has no dat, we will skip it
-                                        return;
-                                    }
-                                    if (s3Scores.count == rmpScores.scores.count) {
-                                        // same amount of ratings, we will skip
-                                        return;
-                                    }
-                                    console.log('Fetching', tid)
-                                    // either not found, or count differs, let's fetch
-                                    return job.ucsc.getRateMyProfessorRatingsByTid(tid)
-                                    .then(function(rmpRatings) {
-                                        console.log('Saving', tid)
-                                        return job.write('./db/rmp/stats/' + tid + '.json', calculateStats(rmpRatings.ratings))
-                                        .then(function() {
-                                            return job.write('./db/rmp/ratings/' + tid + '.json', rmpRatings.ratings)
-                                        })
-                                        .then(function() {
-                                            return job.write('./db/rmp/scores/' + tid + '.json', rmpScores.scores)
-                                        })
-                                        .then(function() {
-                                            return job.write('./db/timestamp/rmp/' + tid + '.json', Math.round(+new Date()/1000))
-                                        })
+                                if (s3Scores.count == rmpScores.scores.count) {
+                                    // same amount of ratings, we will skip
+                                    return;
+                                }
+                                console.log('Fetching', tid)
+                                // either not found, or count differs, let's fetch
+                                return job.ucsc.getRateMyProfessorRatingsByTid(tid)
+                                .then(function(rmpRatings) {
+                                    console.log('Saving', tid)
+                                    return job.write('./db/rmp/stats/' + tid + '.json', calculateStats(rmpRatings.ratings))
+                                    .then(function() {
+                                        return job.write('./db/rmp/ratings/' + tid + '.json', rmpRatings.ratings)
                                     })
                                     .then(function() {
-                                        return uploadOneTid(tid, conn);
+                                        return job.write('./db/rmp/scores/' + tid + '.json', rmpScores.scores)
+                                    })
+                                    .then(function() {
+                                        return job.write('./db/timestamp/rmp/' + tid + '.json', Math.round(+new Date()/1000))
                                     })
                                 })
-                            }, { concurrency: 10 })
-                            .then(function() {
-                                return conn.close()
+                                .then(function() {
+                                    return uploadOneTid(tid);
+                                })
                             })
-                        })
+                        }, { concurrency: 10 })
                     }
                     var tryUploading = function() {
                         return onDemandUpload()
