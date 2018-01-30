@@ -1,6 +1,6 @@
 FROM mhart/alpine-node:8.9.1
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git pdftohtml
 
 RUN npm install pm2 -g
 
