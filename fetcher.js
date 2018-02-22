@@ -198,13 +198,11 @@ var self = module.exports = {
                             return self.write('./db/profMapCache.json', self.profMap)
                         })
                     })
-                    .catch(function(e) {
-                        console.error(e);
-                        console.error('Error saving', term.name)
-                    })
                 }
                 return getCourses()
                 .catch(function() {
+                    console.error(e);
+                    console.error('Error saving', term.name)
                     console.log('Retrying', term.name, '(' + term.code + ')')
                     return getCourses()
                 })
