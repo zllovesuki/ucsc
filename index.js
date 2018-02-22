@@ -961,7 +961,7 @@ var parseDOMFromSelector = function(body) {
             obj.c = headers[i].children[0].data;
         } else {
             obj.l = null;
-            obj.n = headers[i].children[0].data;
+            obj.n = (typeof headers[i].children[0] === 'undefined' ? null : headers[i].children[0].data);
             courses.push(obj);
             obj = {};
         }
