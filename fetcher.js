@@ -200,7 +200,7 @@ var self = module.exports = {
                     })
                 }
                 return getCourses()
-                .catch(function() {
+                .catch(function(e) {
                     console.error(e);
                     console.error('Error saving', term.name)
                     console.log('Retrying', term.name, '(' + term.code + ')')
