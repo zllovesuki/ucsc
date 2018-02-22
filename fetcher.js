@@ -97,105 +97,116 @@ var self = module.exports = {
 
             return Promise.map(terms, function(term) {
                 self.foundTime[term.code] = false;
-                return ucsc.getCourses(term.code, 3000).then(function(courses) {
-                    return Promise.map(Object.keys(courses), function(subject) {
-                        return Promise.map(courses[subject], function(course) {
-                            if (self.foundTime[term.code]) {
-                                return;
-                            }
-                            if (course.num) {
-                                console.log('Term', term.name, 'fetching start and end date')
-                                var getCourse = function(term, course) {
-                                    return ucsc.getCourse(term.code, course.num)
-                                    .then(function(courseInfo) {
-                                        if (courseInfo.md.start === 'N/A') return;
-                                        self.foundTime[term.code] = true;
-                                        term.date = courseInfo.md;
-                                    })
-                                };
-                                return getCourse(term, course)
-                                .catch(function(e) {
-                                    console.log('Retrying', term.name, 'course number', course.num)
+                var getCourses = function() {
+                    return ucsc.getCourses(term.code, 3000).then(function(courses) {
+                        return Promise.map(Object.keys(courses), function(subject) {
+                            return Promise.map(courses[subject], function(course) {
+                                if (self.foundTime[term.code]) {
+                                    return;
+                                }
+                                if (course.num) {
+                                    console.log('Term', term.name, 'fetching start and end date')
+                                    var getCourse = function(term, course) {
+                                        return ucsc.getCourse(term.code, course.num)
+                                        .then(function(courseInfo) {
+                                            if (courseInfo.md.start === 'N/A') return;
+                                            self.foundTime[term.code] = true;
+                                            term.date = courseInfo.md;
+                                        })
+                                    };
                                     return getCourse(term, course)
-                                })
-                            }else{
-                                console.log('No course number found, skipping...')
-                            }
-                        }, { concurrency: 1 })
-                    }, { concurrency: 1 })
-                    .then(function() {
-                        if (term.code < self.termRef) return
-                        // A Cluster of Fucks to overcome the problem of pisa no longer display first/last name for professor
-                        console.log('Additional step: attempt to map displayName to First/Last name via Campus Directory')
-                        for (var subject in courses) {
-                            if (typeof self.profMap[subject] === 'undefined') self.profMap[subject] = {}
-                            for (var i = 0; i < courses[subject].length; i++) {
-                                if (typeof courses[subject][i].ins === 'undefined') continue;
-                                if (typeof courses[subject][i].ins.d === 'undefined' || courses[subject][i].ins.d[0] === 'Staff') continue;
-                                if (typeof courses[subject][i].ins.l !== 'undefined') continue;
-                                if (typeof self.profMap[subject][courses[subject][i].ins.d[0]] !== 'undefined') continue;
-
-                                self.profMap[subject][courses[subject][i].ins.d[0]] = null
-                            }
-                        }
-
-                        return Promise.map(Object.keys(self.profMap), function(subject) {
-                            return Promise.map(Object.keys(self.profMap[subject]), function(profDisplayName) {
-                                if (!!self.profMap[subject][profDisplayName]) return;
-
-                                return ucsc.searchFacultyOnDirectoryByLastname(
-                                    profDisplayName.slice(0, profDisplayName.indexOf(',')),
-                                    profDisplayName.slice(profDisplayName.indexOf(',') + 1),
-                                    self.subjectMap[subject]
-                                )
-                                .then(function(result) {
-                                    if (result.bestGuess.name) {
-                                        self.profMap[subject][profDisplayName] = result.bestGuess.name
-                                    }
-                                })
+                                    .catch(function(e) {
+                                        console.error(e)
+                                        console.error('Error trying for', term.name, 'course number', course.num, 'skipping...')
+                                    })
+                                }else{
+                                    console.log('No course number found, skipping...')
+                                }
                             }, { concurrency: 1 })
                         }, { concurrency: 1 })
                         .then(function() {
+                            if (term.code < self.termRef) return
+                            // A Cluster of Fucks to overcome the problem of pisa no longer display first/last name for professor
+                            console.log('Additional step: attempt to map displayName to First/Last name via Campus Directory')
                             for (var subject in courses) {
+                                if (typeof self.profMap[subject] === 'undefined') self.profMap[subject] = {}
                                 for (var i = 0; i < courses[subject].length; i++) {
                                     if (typeof courses[subject][i].ins === 'undefined') continue;
                                     if (typeof courses[subject][i].ins.d === 'undefined' || courses[subject][i].ins.d[0] === 'Staff') continue;
                                     if (typeof courses[subject][i].ins.l !== 'undefined') continue;
+                                    if (typeof self.profMap[subject][courses[subject][i].ins.d[0]] !== 'undefined') continue;
 
-                                    if (self.profMap[subject][courses[subject][i].ins.d[0]] === null) {
-                                        self.profMap[subject][courses[subject][i].ins.d[0]] = false
-                                    }
-                                    if (!!!self.profMap[subject][courses[subject][i].ins.d[0]]) continue
-
-                                    courses[subject][i].ins.l = self.profMap[subject][courses[subject][i].ins.d[0]].split(' ').slice(-1)[0]
-                                    courses[subject][i].ins.f = self.profMap[subject][courses[subject][i].ins.d[0]].split(' ').slice(0, -1)[0]
+                                    self.profMap[subject][courses[subject][i].ins.d[0]] = null
                                 }
                             }
+
+                            return Promise.map(Object.keys(self.profMap), function(subject) {
+                                return Promise.map(Object.keys(self.profMap[subject]), function(profDisplayName) {
+                                    if (!!self.profMap[subject][profDisplayName]) return;
+
+                                    return ucsc.searchFacultyOnDirectoryByLastname(
+                                        profDisplayName.slice(0, profDisplayName.indexOf(',')),
+                                        profDisplayName.slice(profDisplayName.indexOf(',') + 1),
+                                        self.subjectMap[subject]
+                                    )
+                                    .then(function(result) {
+                                        if (result.bestGuess.name) {
+                                            self.profMap[subject][profDisplayName] = result.bestGuess.name
+                                        }
+                                    })
+                                    .catch(function(e) {
+                                        console.error(e)
+                                        console.error('Error fetching from directory for', profDisplayName)
+                                    })
+                                }, { concurrency: 1 })
+                            }, { concurrency: 1 })
+                            .then(function() {
+                                for (var subject in courses) {
+                                    for (var i = 0; i < courses[subject].length; i++) {
+                                        if (typeof courses[subject][i].ins === 'undefined') continue;
+                                        if (typeof courses[subject][i].ins.d === 'undefined' || courses[subject][i].ins.d[0] === 'Staff') continue;
+                                        if (typeof courses[subject][i].ins.l !== 'undefined') continue;
+
+                                        if (self.profMap[subject][courses[subject][i].ins.d[0]] === null) {
+                                            self.profMap[subject][courses[subject][i].ins.d[0]] = false
+                                        }
+                                        if (!!!self.profMap[subject][courses[subject][i].ins.d[0]]) continue
+
+                                        courses[subject][i].ins.l = self.profMap[subject][courses[subject][i].ins.d[0]].split(' ').slice(-1)[0]
+                                        courses[subject][i].ins.f = self.profMap[subject][courses[subject][i].ins.d[0]].split(' ').slice(0, -1)[0]
+                                    }
+                                }
+                            })
                         })
-                    })
-                    .then(function() {
-                        self.courseListTimestamp[term.code] = Math.round(+new Date()/1000)
-                        return self.write('./db/terms/' + term.code + '.json', courses)
                         .then(function() {
-                            console.log(term.name, 'saved to', './db/terms/' + term.code + '.json');
+                            self.courseListTimestamp[term.code] = Math.round(+new Date()/1000)
+                            return self.write('./db/terms/' + term.code + '.json', courses)
+                            .then(function() {
+                                console.log(term.name, 'saved to', './db/terms/' + term.code + '.json');
+                            })
+                            .then(function() {
+                                return self.write('./db/timestamp/terms/' + term.code + '.json', self.courseListTimestamp[term.code])
+                            })
+                        })
+                    })
+                    .then(function() {
+                        return self.write('./db/terms.json', terms)
+                        .then(function() {
+                            return self.write('./db/timestamp/terms.json', Math.round(+new Date()/1000));
                         })
                         .then(function() {
-                            return self.write('./db/timestamp/terms/' + term.code + '.json', self.courseListTimestamp[term.code])
+                            return self.write('./db/profMapCache.json', self.profMap)
                         })
                     })
-                })
-                .then(function() {
-                    return self.write('./db/terms.json', terms)
-                    .then(function() {
-                        return self.write('./db/timestamp/terms.json', Math.round(+new Date()/1000));
+                    .catch(function(e) {
+                        console.error(e);
+                        console.error('Error saving', term.name)
                     })
-                    .then(function() {
-                        return self.write('./db/profMapCache.json', self.profMap)
-                    })
-                })
-                .catch(function(e) {
-                    console.error(e);
-                    console.error('Error saving', term.name)
+                }
+                return getCourses()
+                .catch(function() {
+                    console.log('Retrying', term.name, '(' + term.code + ')')
+                    return getCourses()
                 })
             }, { concurrency: 1 })
         }).then(function() {
