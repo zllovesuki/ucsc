@@ -427,6 +427,7 @@ var getSubjects = function() {
         var actualSubjects = [];
 
         $('#subject').find('option').each(function(i, elem) {
+            if (!!!$(this).attr('value')) return
             actualSubjects.push({
                 code: $(this).attr('value'),
                 name: $(this).text()
@@ -867,7 +868,7 @@ var parseDOMFromSelector = function(termId, body) {
             obj.l = null
             timeIndex = 7
         }
-        
+
         if (body[i].children[timeIndex].children[2].data.replace(/^\s+/, "").indexOf('Cancel') !== -1) {
             // Let's account for cancelled class
             classDataCompatibleTime = false;

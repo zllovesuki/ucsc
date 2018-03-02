@@ -73,7 +73,9 @@ var uploadExtra = function() {
         path.join(dbPath, 'major-minor.json'),
         path.join(dbPath, 'timestamp', 'major-minor.json'),
         path.join(dbPath, 'final.json'),
-        path.join(dbPath, 'timestamp', 'final.json')
+        path.join(dbPath, 'timestamp', 'final.json'),
+        path.join(dbPath, 'subjects.json'),
+        path.join(dbPath, 'timestamp', 'subjects.json')
     ]
     return Promise.mapSeries(files, function(file) {
         return upload(file);
@@ -239,7 +241,10 @@ var checkForNewTerm = function() {
             }
         })
         .then(function() {
-            return job.saveTermsList(todoTerms)
+            return job.saveSubjects()
+            .then(function() {
+                return job.saveTermsList(todoTerms)
+            })
             .then(function() {
                 return job.saveCourseInfo(todoTerms)
             })
