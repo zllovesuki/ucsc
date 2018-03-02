@@ -758,6 +758,8 @@ var parseCourseDOMFromSelector = function(body) {
                 if (split[0].indexOf('W') !== -1) obj['WED'] = 'Y'
                 if (split[0].indexOf('Th') !== -1) obj['THURS'] = 'Y'
                 if (split[0].indexOf('F') !== -1) obj['FRI'] = 'Y'
+                if (split[0].indexOf('Sa') !== -1) obj['SAT'] = 'Y'
+                if (split[0].indexOf('Su') !== -1) obj['SUN'] = 'Y'
                 split = split[1].split('-');
                 obj.START_TIME = split[0];
                 obj.END_TIME = split[1];
@@ -952,24 +954,16 @@ var parseDOMFromClassData = function(body) {
 
 var parseDOMFromSelector = function(body) {
     var courses = [];
-    var obj = {};
+    var obj = {}, timeObj = {}
     var $ = cheerio.load(body);
     var headers = $('a', $('h2', $('.panel-default')))
-    var numHeaders = headers.length;
-    for (var i = 0; i < numHeaders; i++) {
-        if (i % 2 === 0) {
-            obj.c = headers[i].children[0].data;
-        } else {
-            obj.l = null;
-            obj.n = (typeof headers[i].children[0] === 'undefined' ? null : headers[i].children[0].data);
-            courses.push(obj);
-            obj = {};
-        }
-    }
-
     var body = $('.panel-default > .panel-body > .row')
+    var numHeaders = headers.length
+    var numBody = body.length
 
-    var numBody = body.length;
+    if (numHeaders !== numBody) {
+        throw new Error('Mismatch header and body length.')
+    }
 
     var parseLocation = [];
     var type = '';
@@ -977,12 +971,13 @@ var parseDOMFromSelector = function(body) {
     var status = '';
     var classDataCompatibleTime = {};
     var split = [];
-    for (var i = 0; i < numBody; i++) {
 
+    for (var i = 0; i < numHeaders; i++) {
+        obj.c = headers[i].children[0].data;
         if (typeof body[i].children[1].children[1].children[0] !== 'undefined') {
-            courses[i].num = parseInt(body[i].children[1].children[1].children[0].data);
+            obj.num = parseInt(body[i].children[1].children[1].children[0].data);
         }else{
-            courses[i].num = null;
+            obj.num = null;
         }
 
         // Real time enrollment status is not needed yet
@@ -1003,20 +998,23 @@ var parseDOMFromSelector = function(body) {
             classDataCompatibleTime = null;
         }else{
             split = body[i].children[7].children[2].data.replace(/^\s+/, "").split(' ');
-            if (split[0].indexOf('M') !== -1) obj['MON'] = 'Y'
-            if (split[0].indexOf('Tu') !== -1) obj['TUES'] = 'Y'
-            if (split[0].indexOf('W') !== -1) obj['WED'] = 'Y'
-            if (split[0].indexOf('Th') !== -1) obj['THURS'] = 'Y'
-            if (split[0].indexOf('F') !== -1) obj['FRI'] = 'Y'
+            if (split[0].indexOf('M') !== -1) timeObj['MON'] = 'Y'
+            if (split[0].indexOf('Tu') !== -1) timeObj['TUES'] = 'Y'
+            if (split[0].indexOf('W') !== -1) timeObj['WED'] = 'Y'
+            if (split[0].indexOf('Th') !== -1) timeObj['THURS'] = 'Y'
+            if (split[0].indexOf('F') !== -1) timeObj['FRI'] = 'Y'
+            if (split[0].indexOf('Sa') !== -1) timeObj['SAT'] = 'Y'
+            if (split[0].indexOf('Su') !== -1) timeObj['SUN'] = 'Y'
             split = split[1].split('-');
-            obj.START_TIME = split[0];
-            obj.END_TIME = split[1];
-            classDataCompatibleTime = parseTime(obj);
+            timeObj.START_TIME = split[0];
+            timeObj.END_TIME = split[1];
+            classDataCompatibleTime = parseTime(timeObj);
             split = [];
         }
-        obj = {};
 
-        Object.assign(courses[i], {
+        timeObj = {}
+
+        Object.assign(obj, {
             // RateMyProfessors: https://www.google.com/search?btnG=1&pws=0&q=site:ratemyprofessors.com%20Santa%20Cruz%20 + name
             ins: {
                 d: [ body[i].children[3].children[2].data.replace(/^\s+/, "") ]
@@ -1032,6 +1030,9 @@ var parseDOMFromSelector = function(body) {
         });
 
         classDataCompatibleTime = {};
+
+        courses.push(obj)
+        obj = {}
 
     }
 
@@ -1050,14 +1051,19 @@ var parseDOMFromSelector = function(body) {
     }*/
 
     var actualCourses = {};
-    var parseCourse = [];
+    var parseCourseDash = [];
+    var parseCourseBeforeDash = []
+    var parseCourseAfterDash = []
 
     for (var i = 0, numCourses = courses.length; i < numCourses; i++) {
-        parseCourse = courses[i].c.split(' ');
-        if (typeof actualCourses[parseCourse[0]] === 'undefined') actualCourses[parseCourse[0]] = [];
-        courses[i].c = parseCourse[1]
-        courses[i].s = parseCourse[3]
-        actualCourses[parseCourse[0]].push(courses[i]);
+        parseCourseDash = courses[i].c.split(/-(.+)/)
+        parseCourseBeforeDash = parseCourseDash[0].trim().split(/ (.+)/)
+        parseCourseAfterDash = parseCourseDash[1].trim().split(/(\s+)(.+)/)
+        if (typeof actualCourses[parseCourseBeforeDash[0]] === 'undefined') actualCourses[parseCourseBeforeDash[0]] = [];
+        courses[i].c = parseCourseBeforeDash[1]
+        courses[i].s = parseCourseAfterDash[0]
+        courses[i].n = parseCourseAfterDash[2]
+        actualCourses[parseCourseBeforeDash[0]].push(courses[i]);
     }
 
     var courses = actualCourses;
