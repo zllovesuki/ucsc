@@ -51,6 +51,7 @@ var self = module.exports = {
     /*
         General course list
     */
+    invalidSummerTerms: [],
     courseListTimestamp: {},
     foundTime: {},
     profMap: {},
@@ -201,10 +202,15 @@ var self = module.exports = {
                 }
                 return getCourses()
                 .catch(function(e) {
-                    console.error(e);
-                    console.error('Error saving', term.name)
-                    console.log('Retrying', term.name, '(' + term.code + ')')
-                    return getCourses()
+                    if (e.message.indexOf('not finalized') !== -1) {
+                        console.log(term.code + ' not yet finalized, skipping...')
+                        self.invalidSummerTerms.push(term.code)
+                    }else{
+                        console.error(e);
+                        console.error('Error saving', term.name)
+                        console.log('Retrying', term.name, '(' + term.code + ')')
+                        return getCourses()
+                    }
                 })
             }, { concurrency: 1 })
         }).then(function() {
@@ -223,6 +229,10 @@ var self = module.exports = {
             return Promise.map(json, function(term) {
                 if ( typeof doTerms !== 'undefined' && doTerms.indexOf(term.code) === -1 ) {
                     console.log('Skipping', term.name, 'as specified')
+                    return;
+                }
+                if ( self.invalidSummerTerms.indexOf(term.code) !== -1 ) {
+                    console.log(term.code + ' not yet finalized, skipping...')
                     return;
                 }
                 self.coursesInfo[term.code] = {};
@@ -267,6 +277,7 @@ var self = module.exports = {
         }).then(function() {
             self.courseInfoTimestamp = {};
             self.coursesInfo = {};
+            self.invalidSummerTerms = []
         })
     },
 

@@ -114,6 +114,28 @@ var calculateTermName = function(termCode) {
     return name;
 }
 
+var summerCipher = function(string) { // to make it compatible with the web interface
+    if (string.indexOf('Session 1') !== -1 && string.indexOf('5 Weeks') !== -1) {
+        return '5S1'
+    }
+    if (string.indexOf('Session 2') !== -1 && string.indexOf('5 Weeks') !== -1) {
+        return '5S2'
+    }
+    if (string.indexOf('8 Weeks') !== -1) {
+        return 'S8W'
+    }
+    if (string.indexOf('10 Weeks') !== -1) {
+        return 'S10'
+    }
+    if (string.indexOf('Masters') !== -1 && string.indexOf('First') !== -1) {
+        return 'ED1'
+    }
+    if (string.indexOf('Masters') !== -1 && string.indexOf('Fifth') !== -1) {
+        return 'ED2'
+    }
+    return null
+}
+
 // http://jsfiddle.net/cse_tushar/xEuUR/
 var twelveTo24 = function(time) {
     var hours = Number(time.match(/^(\d+)/)[1]);
@@ -793,167 +815,8 @@ var parseCourseDOMFromSelector = function(body) {
     return course;
 }
 
-var parseDOMFromClassData = function(body) {
-    var $ = cheerio.load(body);
-    var dom = $('a', $('h2', $('.panel-default')))
-    var courses = {};
-    var obj = {};
-    var classData = {};
-    var numHeaders = dom.length;
-    for (var i = 0; i < numHeaders; i++) {
-        if (i % 2 === 0) {
-            // classData Structure (PHP unserialized):
-            /*
-            {
-                STRM: '2168',
-                CLASS_NBR: '22623',
-                CLASS_SECTION: '01',
-                CLASS_MTG_NBR: '1',
-                SESSION_CODE: '1',
-                CLASS_STAT: 'A',
-                SUBJECT: 'AMS',
-                CATALOG_NBR: ' 217',
-                DESCR: 'Intro Fluid Dynamics',
-                SSR_COMPONENT: 'LEC',
-                START_TIME: '09:50AM',
-                END_TIME: '11:25AM',
-                FAC_DESCR: 'J Baskin Engr 372',
-                MON: 'N',
-                TUES: 'Y',
-                WED: 'N',
-                THURS: 'Y',
-                FRI: 'N',
-                SAT: 'N',
-                SUN: 'N',
-                ENRL_STAT: 'C',
-                WAIT_TOT: '0',
-                ENRL_CAP: '35',
-                ENRL_TOT: '24',
-                LAST_NAME: 'Brummell',
-                FIRST_NAME: 'Nicholas',
-                MIDDLE_NAME: 'H',
-                COMBINED_SECTION: 'C',
-                TOPIC: null,
-                DISPLAY_NAME: 'Brummell,N.H.'
-            }
-            */
-            classData = unserialize(Buffer.from(decodeURIComponent(dom[i].attribs.href.substring(dom[i].attribs.href.lastIndexOf('=') + 1)), 'base64').toString('utf-8'));
-            obj.c = classData.CATALOG_NBR.replace(/^\s+/,"");
-            obj.s = classData.CLASS_SECTION;
-            obj.loct = [];
-        }else{
-            obj.l = classData.SESSION_CODE;
-            obj.n = classData.DESCR;
-            obj.num = parseInt(classData.CLASS_NBR);
-            // Comparing the classData, it seems that CLASS_STAT = 'X' means that this class is cancelled,
-            // which now make sense
-            obj.loct.push({
-                t: (classData.CLASS_STAT == 'X' ? false : parseTime(classData)),
-                loc: classData.FAC_DESCR
-            })
-            //obj.ty = classData.SSR_COMPONENT;
-            obj.cap = classData.ENRL_CAP;
-            obj.ins = {
-                d: classData.DISPLAY_NAME ? classData.DISPLAY_NAME.split('<br>') : [ 'Staff' ],
-                f: classData.FIRST_NAME,
-                l: classData.LAST_NAME,
-                m: classData.MIDDLE_NAME
-            };
-            // material: http://slugstore.ucsc.edu/ePOS?form=schedule.html&term=FL16&department.0=WRIT&course.0=169&section.0=01
-
-            if (typeof courses[classData.SUBJECT] === 'undefined') courses[classData.SUBJECT] = [];
-            courses[classData.SUBJECT].push(obj);
-            obj = {};
-            classData = {};
-        }
-    }
-
-    var dup = {};
-    var toMerge = [];
-    var split = [];
-    var master = {};
-    var course = {};
-
-    for (var subject in courses) {
-        for (var i = 0, length = courses[subject].length; i < length; i++) {
-            course = courses[subject][i];
-            if (course.num) {
-                if (typeof dup[subject + course.c + course.s] === 'undefined') {
-                    dup[subject + course.c + course.s] = true;
-                }else{
-                    toMerge.push(subject + ':' + course.num);
-                }
-            }
-        }
-    }
-
-    // toMerge contains the list of class numbers that have more than one time block (eg. MWF AND TuTh)
-    // We are going to find an object with that, copy it to another array, delete the one in the original array
-    // then traversing the WHOLE array (because my data structure is stupid), find the colliding one, copy that to another array
-    // THEN delete that copy as well. After all that, we will merge the loct (location and time)
-    // That means we have to change the data structure
-
-    for (var i = 0, length = toMerge.length; i < length; i++) {
-        split = toMerge[i].split(':');
-        // 0 is the subject
-        // 1 is the course number
-        for (var j = 0, length2 = courses[split[0]].length; j < length2; j++) {
-            if (courses[split[0]][j].num == split[1]) {
-                if (typeof master[split[0]] === 'undefined') {
-                    master[split[0]] = {};
-                }
-                if (typeof master[split[0]][split[1]] === 'undefined') {
-                    master[split[0]][split[1]] = JSON.parse(JSON.stringify(courses[split[0]][j]));
-                }else{
-                    master[split[0]][split[1]].loct.push(JSON.parse(JSON.stringify(courses[split[0]][j].loct[0])));
-                }
-
-            }
-        }
-
-        var recursionRemove = function() {
-            var index;
-            for (var k = 0, length3 = courses[split[0]].length; k < length3; k++) {
-                if (courses[split[0]][k].num == split[1]) {
-                    if (-1 !== (index = courses[split[0]].indexOf(courses[split[0]][k])))
-                    courses[split[0]].splice(index, 1);
-                    return recursionRemove();
-                }
-            }
-        }
-
-        recursionRemove();
-
-        split = [];
-    }
-
-    var hashCounter = 0;
-    var hash = {};
-
-    Object.keys(master).forEach(function(subject) {
-        Object.keys(master[subject]).forEach(function(num) {
-            // We will now deduplicate locts (as brought up by class CRSM 150B, where is has THREE blocks)
-            master[subject][num].loct.forEach(function(loct) {
-                hash[(loct.loc ? loct.loc : 'Nothing') + '|' + (loct.t ? loct.t.day : [] ).join('|') + '|' + (loct.t ? loct.t.time.start + '|' + loct.t.time.end : 'Nothing')] = loct;
-            })
-            if (Object.keys(hash).length > 0) {
-                master[subject][num].loct = [];
-                for (var item in hash) {
-                    master[subject][num].loct[hashCounter++] = hash[item];
-                }
-                hashCounter = 0;
-                hash = {};
-            } // http://stackoverflow.com/questions/19501441/remove-duplicate-objects-from-an-array-using-javascript
-            master[subject][num].dup = true;
-            courses[subject].push(master[subject][num]);
-        })
-    })
-
-    return courses;
-}
-
-var parseDOMFromSelector = function(body) {
-    var courses = [];
+var parseDOMFromSelector = function(termId, body) {
+    var courses = [], isSummer = false
     var obj = {}, timeObj = {}
     var $ = cheerio.load(body);
     var headers = $('a', $('h2', $('.panel-default')))
@@ -965,14 +828,20 @@ var parseDOMFromSelector = function(body) {
         throw new Error('Mismatch header and body length.')
     }
 
+    if (calculateTermName(termId).indexOf('Summer') !== -1) {
+        isSummer = true
+        console.log(termId + ': Summer quarter requires special treatment')
+    }
+
     var parseLocation = [];
     var type = '';
     var location = '';
     var status = '';
     var classDataCompatibleTime = {};
-    var split = [];
+    var split = [], timeIndex
 
     for (var i = 0; i < numHeaders; i++) {
+
         obj.c = headers[i].children[0].data;
         if (typeof body[i].children[1].children[1].children[0] !== 'undefined') {
             obj.num = parseInt(body[i].children[1].children[1].children[0].data);
@@ -991,13 +860,21 @@ var parseDOMFromSelector = function(body) {
 
         parseLocation = body[i].children[5].children[2].data.replace(/^\s+/, "").split(':', 2);
 
-        if (body[i].children[7].children[2].data.replace(/^\s+/, "").indexOf('Cancel') !== -1) {
+        obj.l = summerCipher(body[i].children[7].children[2].data)
+
+        timeIndex = (isSummer ? 9 : 7)
+
+        if (isSummer && typeof body[i].children[timeIndex].children[2] === 'undefined') {
+            throw new Error('Summer session is not finalized yet.')
+        }
+
+        if (body[i].children[timeIndex].children[2].data.replace(/^\s+/, "").indexOf('Cancel') !== -1) {
             // Let's account for cancelled class
             classDataCompatibleTime = false;
-        }else if (body[i].children[7].children[2].data.replace(/^\s+/, "").substring(0, 3) === 'TBA') {
+        }else if (body[i].children[timeIndex].children[2].data.replace(/^\s+/, "").substring(0, 3) === 'TBA') {
             classDataCompatibleTime = null;
         }else{
-            split = body[i].children[7].children[2].data.replace(/^\s+/, "").split(' ');
+            split = body[i].children[timeIndex].children[2].data.replace(/^\s+/, "").split(' ');
             if (split[0].indexOf('M') !== -1) timeObj['MON'] = 'Y'
             if (split[0].indexOf('Tu') !== -1) timeObj['TUES'] = 'Y'
             if (split[0].indexOf('W') !== -1) timeObj['WED'] = 'Y'
@@ -1290,13 +1167,7 @@ var getMaps = function() {
 
 var getCourses = function(termId, limit) {
     return getCoursesRawDom(termId, limit).then(function(body) {
-        var courses = {};
-        try {
-            courses = parseDOMFromClassData(body);
-        }catch(e) {
-            courses = parseDOMFromSelector(body);
-        }
-        return courses;
+        return parseDOMFromSelector(termId, body);
     })
 }
 

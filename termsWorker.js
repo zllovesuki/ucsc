@@ -231,6 +231,14 @@ var checkForNewTerm = function() {
                 remoteNewTerm = job.ucsc.calculateNextTermCode(s3Terms[0].code).toString();
             }
             return job.ucsc.getCourses(remoteNewTerm, 25)
+            .catch(function(e) {
+                if (e.message.indexOf('not finalized') !== -1) {
+                    console.log(remoteNewTerm + ' not yet finalized, skipping...')
+                    return {}
+                }else{
+                    throw e
+                }
+            })
         })
         .then(function(remoteCourses) {
             if (remoteNewTerm !== null && Object.keys(remoteCourses).length > 0) {
