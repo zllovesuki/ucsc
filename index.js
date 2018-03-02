@@ -860,14 +860,14 @@ var parseDOMFromSelector = function(termId, body) {
 
         parseLocation = body[i].children[5].children[2].data.replace(/^\s+/, "").split(':', 2);
 
-        obj.l = summerCipher(body[i].children[7].children[2].data)
-
-        timeIndex = (isSummer ? 9 : 7)
-
-        if (isSummer && typeof body[i].children[timeIndex].children[2] === 'undefined') {
-            throw new Error('Summer session is not finalized yet.')
+        if (typeof body[i].children[7].children[2] !== 'undefined' && body[i].children[7].children[2].data.indexOf('Summer') !== -1) {
+            obj.l = summerCipher(body[i].children[7].children[2].data)
+            timeIndex = 9
+        }else{
+            obj.l = null
+            timeIndex = 7
         }
-
+        
         if (body[i].children[timeIndex].children[2].data.replace(/^\s+/, "").indexOf('Cancel') !== -1) {
             // Let's account for cancelled class
             classDataCompatibleTime = false;
