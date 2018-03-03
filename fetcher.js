@@ -95,6 +95,12 @@ var self = module.exports = {
                 else return 0
             })[0].code - 10
 
+            if (terms.length < 4) {
+                console.error('Potential poison results detected, forced exit.')
+                console.log(terms)
+                return Promise.reject(new Error('Rejecting poisonus results.'))
+            }
+
             return Promise.map(terms, function(term) {
                 self.foundTime[term.code] = false;
                 var getCourses = function() {
@@ -353,6 +359,11 @@ var self = module.exports = {
     */
     saveSubjects: function() {
         return ucsc.getSubjects().then(function(subjects) {
+            if (subjects.length < 4) {
+                console.error('Potential poison results detected, forced exit.')
+                console.log(subjects)
+                return Promise.reject(new Error('Rejecting poisonus results.'))
+            }
             return self.write('./db/subjects.json', subjects).then(function() {
                 console.log('Subject list saved to', './db/subjects.json');
             })
