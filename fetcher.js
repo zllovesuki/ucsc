@@ -96,7 +96,7 @@ var self = module.exports = {
             })[0].code - 10
 
             if (terms.length < 4) {
-                console.error('Potential poison results detected, forced exit.')
+                console.error('Potential poisonus terms list results detected, forced exit.')
                 console.log(terms)
                 return Promise.reject(new Error('Rejecting poisonus results.'))
             }
@@ -105,6 +105,11 @@ var self = module.exports = {
                 self.foundTime[term.code] = false;
                 var getCourses = function() {
                     return ucsc.getCourses(term.code, 3000).then(function(courses) {
+                        if (courses.length < 4) {
+                            console.error('Potential poisonus course list results detected, forced exit.')
+                            console.log(terms)
+                            return Promise.reject(new Error('Rejecting poisonus results.'))
+                        }
                         return Promise.map(Object.keys(courses), function(subject) {
                             return Promise.map(courses[subject], function(course) {
                                 if (self.foundTime[term.code]) {
@@ -360,8 +365,8 @@ var self = module.exports = {
     saveSubjects: function() {
         return ucsc.getSubjects().then(function(subjects) {
             if (subjects.length < 4) {
-                console.error('Potential poison results detected, forced exit.')
-                console.log(subjects)
+                console.error('Potential poisonus subject list results detected, forced exit.')
+                console.log(terms)
                 return Promise.reject(new Error('Rejecting poisonus results.'))
             }
             return self.write('./db/subjects.json', subjects).then(function() {
