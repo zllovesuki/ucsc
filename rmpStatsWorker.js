@@ -1,9 +1,15 @@
 var Promise = require('bluebird');
+var r = require('rethinkdb');
 var job = require('./fetcher');
 var knox = require('knox');
 var config = require('./config');
 var path = require('path');
 var fs = require('fs')
+var Etcd3 = require('etcd3').Etcd3
+var etcdClient = new Etcd3({
+    hosts: process.env.ENDPOINTS.split(',')
+})
+var tcpPing = require('tcp-ping')
 
 var s3 = knox.createClient(Object.assign(config.s3, {
     style: 'path'
@@ -11,7 +17,73 @@ var s3 = knox.createClient(Object.assign(config.s3, {
 var db = __dirname + '/db',
     dbPath = path.resolve(db);
 
-var upload = function(source) {
+// RethinkDB driver tls requires hostname because of my cert... doing some dumb things right now
+var workaround = JSON.parse(process.env.WORKAROUND)
+
+var upload2Andromeda = function(source) {
+    return r.db('slugsurvival').table('data').insert({
+        key: source.substring(db.length + 1).slice(0, -5),
+        value: fs.readFileSync(source).toString('utf-8')
+    }, {
+        conflict: 'replace'
+    }).run(r.conn).then(function(resilt) {
+        console.log(source, 'saved to database')
+    })
+}
+
+var walk = function(dir) {
+    var results = []
+    var list = fs.readdirSync(dir)
+    list.forEach(function(file) {
+        file = dir + '/' + file
+        var stat = fs.statSync(file)
+        if (stat && stat.isDirectory()) results = results.concat(walk(file))
+        else results.push(file)
+    })
+    return results
+} // http://stackoverflow.com/questions/5827612/node-js-fs-readdir-recursive-directory-search
+
+var uploadEverything2Andromeda = function() {
+    var files = walk(dbPath);
+    return Promise.map(files, function(file) {
+        return upload2Andromeda(file);
+    }, { concurrency: 10 })
+}
+
+var ping = function(server, port) {
+    return new Promise(function(resolve, reject) {
+        tcpPing.ping({
+            address: server,
+            port: port,
+            timeout: 500,
+            attempts: 3
+        }, function(err, data) {
+            if (err) return reject(err)
+
+            if (isNaN(data.avg)) return resolve(false)
+
+            return resolve(data.avg)
+        })
+    });
+}
+
+var findBestServer = function(servers, port) {
+    var bestAvg = 1000
+    var best = null
+    return Promise.map(servers, function(server) {
+        return ping(server, port).then(function(avg) {
+            if (avg !== false && avg < bestAvg) {
+                best = server
+                bestAvg = avg
+            }
+        })
+    })
+    .then(function() {
+        return best
+    })
+}
+
+var upload2S3 = function(source) {
     return new Promise(function(resolve, reject) {
         console.log('Uploading', source)
         fs.stat(source, function(err, stat) {
@@ -39,7 +111,7 @@ var uploadOneTid = function(tid) {
         path.join(dbPath, 'timestamp', 'rmp', tid + '.json'),
     ]
     return Promise.mapSeries(files, function(file) {
-        return upload(file);
+        return upload2S3(file);
     })
 }
 
@@ -188,6 +260,31 @@ var checkForChanges = function() {
                 }, { concurrency: 2 })
             })
         }, { concurrency: 1 })
+    }).then(function() {
+        return etcdClient.getAll().prefix('/announce/services/rethinkdb').strings().then(function(keys) {
+            return findBestServer(Object.values(keys), 28015).then(function(best) {
+                msg.ack()
+                if (best === null) {
+                    console.error('No available Andromeda servers available!')
+                    return;
+                }
+                r.connect({
+                    host: workaround[best],
+                    port: 28015,
+                    ssl: {
+                        ca: [ fs.readFileSync('./ssl/ca.pem') ]
+                    }
+                }).then(function(conn) {
+                    r.conn = conn
+                    uploadEverything2Andromeda().then(function() {
+                        r.conn.close()
+                    })
+                })
+            })
+        }).catch(function(e) {
+            console.error('Cannot connect to Andromeda!')
+            console.error(e)
+        })
     })
 }
 
