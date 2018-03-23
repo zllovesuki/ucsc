@@ -109,7 +109,7 @@ stan.on('connect', function() {
                     host: best,
                     port: 28015,
                     ssl: {
-                        ca: [ fs.readSync('./ssl/ca.pem') ]
+                        ca: [ fs.readFileSync('./ssl/ca.pem') ]
                     }
                 }).then(function(conn) {
                     r.conn = conn
