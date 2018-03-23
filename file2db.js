@@ -4,7 +4,7 @@ var path = require('path')
 var config = require('./config')
 var Etcd3 = require('etcd3').Etcd3
 var etcdClient = new Etcd3({
-    hosts: process.env.ENDPOINTS
+    hosts: process.env.ENDPOINTS.split(',')
 })
 var tcpPing = require('tcp-ping')
 var stan = require('node-nats-streaming').connect('persistent-queue', 'ucsc-file2db', {
