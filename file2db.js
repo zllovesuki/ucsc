@@ -17,6 +17,10 @@ var subscription = null
 var db = __dirname + '/db',
     dbPath = path.resolve(db)
 
+
+// RethinkDB driver tls requires hostname because of my cert... doing some dumb things right now
+var workaround = JSON.parse(process.env.WORKAROUND)
+
 var upload = function(source) {
     return r.db('slugsurvival').table('data').insert({
         key: source.substring(db.length + 1).slice(0, -5),
@@ -106,7 +110,7 @@ stan.on('connect', function() {
                     return;
                 }
                 r.connect({
-                    host: best,
+                    host: workaround[best],
                     port: 28015,
                     ssl: {
                         ca: [ fs.readFileSync('./ssl/ca.pem') ]
