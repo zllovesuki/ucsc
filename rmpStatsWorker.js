@@ -263,7 +263,6 @@ var checkForChanges = function() {
     }).then(function() {
         return etcdClient.getAll().prefix('/announce/services/rethinkdb').strings().then(function(keys) {
             return findBestServer(Object.values(keys), 28015).then(function(best) {
-                msg.ack()
                 if (best === null) {
                     console.error('No available Andromeda servers available!')
                     return;
