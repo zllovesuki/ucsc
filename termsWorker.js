@@ -279,7 +279,7 @@ var checkForNewTerm = function() {
     })
 }
 
-shouldStartFresh().then(function(weShould) {
+broker.start().then(shouldStartFresh).then(function(weShould) {
     if (weShould) {
         // initialize everything
         console.log('No data found on Andromeda, fetching fresh data...')
