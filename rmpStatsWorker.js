@@ -15,7 +15,7 @@ var broker = new ServiceBroker({
     transporter: {
         type: 'NATS',
         options: {
-            urls: config.andromeda
+            urls: config.andromeda,
             tls: {
                 ca: [ fs.readFileSync('./ssl/ca.pem') ],
                 cert: fs.readFileSync('./ssl/client.pem'),
