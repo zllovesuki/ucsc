@@ -29,16 +29,11 @@ var broker = new ServiceBroker({
 var db = __dirname + '/db',
     dbPath = path.resolve(db);
 
-// RethinkDB driver tls requires hostname because of my cert... doing some dumb things right now
-var workaround = JSON.parse(process.env.WORKAROUND)
-
 var upload2Andromeda = function(source) {
-    return r.db('slugsurvival').table('data').insert({
+    return broker.call('db-slugsurvival-data.save', {
         key: source.substring(db.length + 1).slice(0, -5),
         value: fs.readFileSync(source).toString('utf-8')
-    }, {
-        conflict: 'replace'
-    }).run(r.conn).then(function(resilt) {
+    }).then(function(resilt) {
         console.log(source, 'saved to database')
     })
 }
@@ -54,13 +49,6 @@ var walk = function(dir) {
     })
     return results
 } // http://stackoverflow.com/questions/5827612/node-js-fs-readdir-recursive-directory-search
-
-var uploadEverything2Andromeda = function() {
-    var files = walk(dbPath);
-    return Promise.map(files, function(file) {
-        return upload2Andromeda(file);
-    }, { concurrency: 10 })
-}
 
 var upload2Andromeda = function(source) {
     return broker.call('db-slugsurvival-data.save', {
