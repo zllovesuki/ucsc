@@ -12,13 +12,12 @@
     "cheerio": "^1.0.0-rc.2",
     "death": "^1.1.0",
     "elasticlunr": "^0.9.5",
-    "etcd3": "^0.2.9",
     "faker": "^4.1.0",
     "fuzzyset.js": "0.0.4",
-    "knox": "^0.9.2",
     "minio": "^3.2.3",
     "mocha": "^4.0.1",
     "moleculer": "^0.12.1",
+    "nats": "^0.8.4",
     "node-nats-streaming": "0.0.26",
     "pm2": "^2.7.2",
     "protobufjs": "^6.8.6",
@@ -26,9 +25,7 @@
     "rethinkdb": "^2.3.3",
     "socks5-http-client": "^1.0.2",
     "socks5-https-client": "^1.2.1",
-    "string-similarity": "^1.2.0",
-    "superagent": "^3.8.1",
-    "tcp-ping": "^0.1.1"
+    "string-similarity": "^1.2.0"
   },
   "scripts": {
     "test": "node node_modules/mocha/bin/mocha --timeout 30000 --reporter spec"
