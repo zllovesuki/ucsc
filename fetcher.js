@@ -559,10 +559,10 @@ var self = module.exports = {
     getCapsInFirstName: function(string) {
         return string.replace(/[a-z]/g, '')
     },
-    saveRateMyProfessorsMappings: function(s3ReadHandler) {
+    saveRateMyProfessorsMappings: function(andromedaReadHandler) {
         self.instructors = []
         self.mapping = {}
-        return s3ReadHandler('/terms.json').then(function(json) {
+        return andromedaReadHandler('terms').then(function(json) {
             self.termRef = json.sort(function(a, b) {
                 if (a.code < b.code) return 1
                 else if (a.code > b.code) return -1
@@ -570,7 +570,7 @@ var self = module.exports = {
             })[0].code - 10
             return Promise.map(json, function(term) {
                 if (term.code < self.termRef) return
-                return s3ReadHandler('/terms/' + term.code + '.json').then(function(courses) {
+                return andromedaReadHandler('terms/' + term.code).then(function(courses) {
                     Object.keys(courses).forEach(function(subject) {
                         courses[subject].forEach(function(course) {
                             if (!(course.ins.f && course.ins.l)) {

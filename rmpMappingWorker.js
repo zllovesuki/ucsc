@@ -1,55 +1,45 @@
 var Promise = require('bluebird');
 var job = require('./fetcher');
-var knox = require('knox');
 var config = require('./config');
 var path = require('path');
 var fs = require('fs')
 var pm2 = require('pm2')
+var ServiceBroker = require('moleculer').ServiceBroker
 
-var s3 = knox.createClient(Object.assign(config.s3, {
-    style: 'path'
-}));
-
+var broker = new ServiceBroker({
+    logger: console,
+    logLevel: 'warn',
+    requestTimeout: 5 * 1000,
+    requestRetry: 2,
+    serializer: 'ProtoBuf',
+    transporter: {
+        type: 'NATS',
+        options: {
+            urls: config.andromeda
+            tls: {
+                ca: [ fs.readFileSync('./ssl/ca.pem') ],
+                cert: fs.readFileSync('./ssl/client.pem'),
+                key: fs.readFileSync('./ssl/client-key.pem')
+            },
+            yieldTime: 50
+        }
+    },
+    validation: true
+})
 var db = __dirname + '/db',
     dbPath = path.resolve(db);
 
 var upload = function(source) {
-    return new Promise(function(resolve, reject) {
-        console.log('Uploading', source)
-        fs.stat(source, function(err, stat) {
-            var fileStream = fs.createReadStream(source);
-            s3.putStream(fileStream, source.substring(source.indexOf('db') + 2), {
-                'Content-Length': stat.size,
-                'Content-Type': 'application/json'
-            }, function(err, res) {
-                if (err) {
-                    return reject(err);
-                }
-                console.log(source, 'uploaded')
-                resolve()
-            })
-        })
-    });
+    return broker.call('db-slugsurvival-data.save', {
+        key: source.substring(db.length + 1).slice(0, -5),
+        value: fs.readFileSync(source).toString('utf-8')
+    })
 }
 
-var s3ReadHandler = function(source) {
-    return new Promise(function(resolve, reject) {
-        s3.getFile(source, function(err, res) {
-            if (err) {
-                return reject(err);
-            }
-            if (res.statusCode == 404) {
-                return reject('Not Found')
-            }
-            var data = '';
-            res.on('data', function(chunk) {
-                data += chunk;
-            })
-            res.on('end', function() {
-                return resolve(JSON.parse(data));
-            })
-        })
-    });
+var andromedaReadHandler = function(key) {
+    return broker.call('db-slugsurvival-data.fetch', {
+        key: key
+    })
 }
 
 var uploadMappings = function() {
@@ -68,7 +58,7 @@ var downloadNewMappings = function() {
         TODO: locking
     */
     console.log('Download new mappings...')
-    return job.saveRateMyProfessorsMappings(s3ReadHandler)
+    return job.saveRateMyProfessorsMappings(andromedaReadHandler)
     .then(function() {
         var onDemandUpload = function() {
             return uploadMappings()
@@ -111,4 +101,4 @@ var startStatsWorker = function() {
     });
 }
 
-downloadNewMappings().then(startStatsWorker)
+broker.start().then(downloadNewMappings).then(startStatsWorker)

@@ -1,35 +1,41 @@
 var Promise = require('bluebird');
 var job = require('./fetcher');
-var knox = require('knox');
 var config = require('./config');
 var path = require('path');
 var fs = require('fs')
-var stan = null;
+var stan = null
+var ServiceBroker = require('moleculer').ServiceBroker
 var ON_DEATH = require('death')({uncaughtException: true});
 
-var s3 = knox.createClient(Object.assign(config.s3, {
-    style: 'path'
-}));
+var broker = new ServiceBroker({
+    logger: console,
+    logLevel: 'warn',
+    requestTimeout: 5 * 1000,
+    requestRetry: 2,
+    serializer: 'ProtoBuf',
+    transporter: {
+        type: 'NATS',
+        options: {
+            urls: config.andromeda
+            tls: {
+                ca: [ fs.readFileSync('./ssl/ca.pem') ],
+                cert: fs.readFileSync('./ssl/client.pem'),
+                key: fs.readFileSync('./ssl/client-key.pem')
+            },
+            yieldTime: 50
+        }
+    },
+    validation: true
+})
+
 var db = __dirname + '/db',
     dbPath = path.resolve(db);
 
 var upload = function(source) {
-    return new Promise(function(resolve, reject) {
-        console.log('Uploading', source)
-        fs.stat(source, function(err, stat) {
-            var fileStream = fs.createReadStream(source);
-            s3.putStream(fileStream, source.substring(source.indexOf('db') + 2), {
-                'Content-Length': stat.size,
-                'Content-Type': 'application/json'
-            }, function(err, res) {
-                if (err) {
-                    return reject(err);
-                }
-                console.log(source, 'uploaded')
-                resolve()
-            })
-        })
-    });
+    return broker.call('db-slugsurvival-data.save', {
+        key: source.substring(db.length + 1).slice(0, -5),
+        value: fs.readFileSync(source).toString('utf-8')
+    })
 }
 
 var walk = function(dir) {
@@ -95,37 +101,21 @@ var uploadOneTerm = function(code) {
     })
 }
 
-var shouldStartFresh = function() {
-    console.log('Check if S3 has data...')
-    return new Promise(function(resolve, reject) {
-        s3.getFile('terms.json', function(err, res) {
-            if (err) {
-                reject(err);
-            }
-            if (res.statusCode == 404) {
-                // we should fetch all files
-                return resolve(true);
-            }
-            return resolve(false);
-        })
+var getTermsJsonOnAndromeda = function() {
+    return broker.call('db-slugsurvival-data.fetch', {
+        key: 'terms'
     })
 }
 
-var getTermsJsonOnS3 = function() {
-    return new Promise(function(resolve, reject) {
-        s3.getFile('terms.json', function(err, res) {
-            if (err) {
-                reject(err);
-            }
-            var data = '';
-            res.on('data', function(chunk) {
-                data += chunk;
-            })
-            res.on('end', function() {
-                return resolve(JSON.parse(data));
-            })
-        })
-    });
+var shouldStartFresh = function() {
+    console.log('Check if Andromeda has data...')
+    return getTermsJsonOnAndromeda().then(function() {
+        return false
+    }).catch(function(e) {
+        if (e.message.indexOf('Not Found') !== -1) return true
+        console.error('Error thrown from Andromeda')
+        throw e
+    })
 }
 
 var dirtyGC = function() {
@@ -197,7 +187,7 @@ var checkForNewTerm = function() {
         TODO: locking
     */
     console.log('Checking for new terms on pisa');
-    return getTermsJsonOnS3().then(function(s3Terms) {
+    return getTermsJsonOnAndromeda().then(function(s3Terms) {
         s3Terms.sort(function(a, b) { return b.code - a.code });
 
         var todoTerms = [];
@@ -292,7 +282,7 @@ var checkForNewTerm = function() {
 shouldStartFresh().then(function(weShould) {
     if (weShould) {
         // initialize everything
-        console.log('No data found on S3, fetching fresh data...')
+        console.log('No data found on Andromeda, fetching fresh data...')
         // download everything...
         // then uploading everything
         return job.saveSubjects()
@@ -324,7 +314,7 @@ shouldStartFresh().then(function(weShould) {
             process.exit(1)
         })
     }else{
-        console.log('Data already populated on S3.')
+        console.log('Data already populated on Andromeda.')
     }
 }).then(function() {
     checkForNewTerm();
