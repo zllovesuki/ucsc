@@ -9,6 +9,15 @@ var ServiceBroker = require('moleculer').ServiceBroker
 var broker = new ServiceBroker({
     logger: console,
     logLevel: 'warn',
+    heartbeatInterval: 10,
+    heartbeatTimeout: 30,
+    registry: {
+        strategy: 'Latency',
+        strategyOptions: {
+            sampleCount: 15,
+            lowLatency: 20
+        }
+    },
     requestTimeout: 5 * 1000,
     requestRetry: 2,
     serializer: 'ProtoBuf',
