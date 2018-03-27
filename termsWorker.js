@@ -15,8 +15,10 @@ var broker = new ServiceBroker({
     registry: {
         strategy: 'Latency',
         strategyOptions: {
-            lowLatency: 10,
-            collectCount: 10
+            sampleCount: 15,
+            lowLatency: 20,
+            collectCount: 10,
+            pingInterval: 15
         }
     },
     requestTimeout: 5 * 1000,
