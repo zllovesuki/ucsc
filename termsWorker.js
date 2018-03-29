@@ -33,7 +33,7 @@ var broker = new ServiceBroker({
                 cert: fs.readFileSync('./ssl/client.pem'),
                 key: fs.readFileSync('./ssl/client-key.pem')
             },
-            yieldTime: 50
+            yieldTime: 20
         }
     },
     validation: true
