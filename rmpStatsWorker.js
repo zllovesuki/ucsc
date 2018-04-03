@@ -143,7 +143,9 @@ var checkForChanges = function() {
                             if (typeof rmp[course.ins.f + course.ins.l] !== 'undefined') return;
                             rmp[course.ins.f + course.ins.l] = true;
                             return Promise.all([
-                                andromedaReadHandler('rmp/scores/' + tid),
+                                andromedaReadHandler('rmp/scores/' + tid).catch(function(e) {
+                                    return {}
+                                }),
                                 job.ucsc.getRateMyProfessorScoresByTid(tid)
                             ]).spread(function(s3Scores, rmpScores) {
                                 if (typeof s3Scores.count === 'undefined' && typeof rmpScores.scores.count === 'undefined') {
