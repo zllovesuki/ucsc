@@ -9,7 +9,7 @@ var ON_DEATH = require('death')({uncaughtException: true});
 
 var broker = new ServiceBroker({
     logger: console,
-    logLevel: 'warn',
+    logLevel: 'error',
     heartbeatInterval: 10,
     heartbeatTimeout: 30,
     registry: {
