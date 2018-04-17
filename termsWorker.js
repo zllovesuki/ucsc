@@ -162,11 +162,9 @@ var delta = function(termCode) {
     }
 }
 
-var broadcastUpdate = Promise.method(function (termId) {
-    console.log('Braodcasting slugsurvival-data.update: ' + termId)
-    return broker.broadcast('slugsurvival-data.update', {
-        termId
-    })
+var broadcastUpdate = Promise.method(function () {
+    console.log('Braodcasting slugsurvival-data.update')
+    return broker.broadcast('slugsurvival-data.update')
 })
 
 var checkForNewTerm = function() {
