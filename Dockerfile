@@ -1,4 +1,4 @@
-FROM mhart/alpine-node:8.9.1
+FROM mhart/alpine-node:8.11.1
 
 RUN apk add --no-cache git poppler-utils
 
