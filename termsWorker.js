@@ -21,7 +21,7 @@ var broker = new ServiceBroker({
             pingInterval: 15
         }
     },
-    requestTimeout: 5 * 1000,
+    requestTimeout: 30 * 1000,
     requestRetry: 2,
     serializer: 'ProtoBuf',
     transporter: {
