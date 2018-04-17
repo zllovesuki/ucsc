@@ -1,6 +1,6 @@
 {
   "name": "ucsc",
-  "version": "7.2.0",
+  "version": "8.0.0",
   "description": "",
   "main": "index.js",
   "dependencies": {
@@ -20,7 +20,6 @@
     "nats": "^0.8.4",
     "node-nats-streaming": "0.0.26",
     "pm2": "^2.7.2",
-    "protobufjs": "^6.8.6",
     "request": "^2.83.0",
     "rethinkdb": "^2.3.3",
     "socks5-http-client": "^1.0.2",
