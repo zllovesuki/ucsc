@@ -23,7 +23,6 @@ var broker = new ServiceBroker({
     },
     requestTimeout: 30 * 1000,
     requestRetry: 2,
-    serializer: 'ProtoBuf',
     transporter: {
         type: 'NATS',
         options: {
