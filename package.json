@@ -1,6 +1,6 @@
 {
   "name": "ucsc",
-  "version": "8.0.0",
+  "version": "8.1.0",
   "description": "",
   "main": "index.js",
   "dependencies": {
@@ -16,9 +16,8 @@
     "fuzzyset.js": "0.0.4",
     "minio": "^3.2.3",
     "mocha": "^4.0.1",
-    "moleculer": "github:zllovesuki/moleculer#bleeding_edge",
+    "moleculer": "^0.12.2",
     "nats": "^0.8.4",
-    "node-nats-streaming": "0.0.26",
     "pm2": "^2.7.2",
     "request": "^2.83.0",
     "rethinkdb": "^2.3.3",
