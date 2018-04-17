@@ -3,7 +3,6 @@ var job = require('./fetcher');
 var config = require('./config');
 var path = require('path');
 var fs = require('fs')
-var stan = null
 var ServiceBroker = require('moleculer').ServiceBroker
 var ON_DEATH = require('death')({uncaughtException: true});
 
@@ -163,34 +162,12 @@ var delta = function(termCode) {
     }
 }
 
-var publishSanity = function() {
-    return new Promise(function(resolve, reject) {
-        console.log('Connecting to queue...')
-        stan = require('node-nats-streaming').connect('persistent-queue', 'ucsc-data', {
-            'servers': config.nats
-        });
-
-        stan.on('error', function(e) {
-            reject(e)
-        })
-
-        stan.on('connect', function() {
-            stan.publish('requestSanity', 'true', function(err, guid) {
-                if (err) {
-                    return reject(err)
-                }
-                console.log('requestSanity published.')
-
-                stan.close()
-
-                stan.on('close', function() {
-                    stan = null
-                    resolve()
-                })
-            })
-        })
-    });
-}
+var broadcastUpdate = Promise.method(function (termId) {
+    console.log('Braodcasting slugsurvival-data.update: ' + termId)
+    return broker.broadcast('slugsurvival-data.update', {
+        termId
+    })
+})
 
 var checkForNewTerm = function() {
     /*
@@ -253,30 +230,15 @@ var checkForNewTerm = function() {
             .then(job.saveMajorsMinors)
             .then(job.saveFinalSchedules)
             .then(function() {
-                var onDemandUpload = function() {
-                    return Promise.map(todoTerms, uploadOneTerm, { concurrency: 3 })
-                    .then(uploadExtra)
-                }
-                var tryUploading = function() {
-                    return onDemandUpload()
-                    .catch(function(e) {
-                        console.error('Error thrown in onDemandUpload (existed)', e)
-                        console.log('Retrying...')
-                        return tryUploading()
-                    })
-                }
-                return tryUploading()
+                return Promise.map(todoTerms, uploadOneTerm, { concurrency: 3 })
+                .then(uploadExtra)
+                .catch(function(e) {
+                    console.error('Error thrown in onDemandUpload (existed)', e)
+                })
             })
-            .then(function() {
-                var tryPublishing = function() {
-                    return publishSanity()
-                    .catch(function(e) {
-                        console.error('Error thrown in tryPublishing', e)
-                        console.log('Retrying...')
-                        return tryPublishing()
-                    })
-                }
-                return tryPublishing()
+            .then(broadcastUpdate)
+            .catch(function(e) {
+                console.error('Error thrown in tryBroadcasting', e)
             })
         })
     }).catch(function(e) {
@@ -331,10 +293,7 @@ broker.start().then(shouldStartFresh).then(function(weShould) {
 })
 
 ON_DEATH(function(signal, err) {
-    if (stan !== null) {
-        stan.close();
-        stan.on('close', function() {
-            process.exit()
-        });
-    }
+    broker.stop().then(function() {
+        process.exit(0)
+    })
 })
