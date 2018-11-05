@@ -7,7 +7,6 @@ var ServiceBroker = require('moleculer').ServiceBroker
 var ON_DEATH = require('death')({uncaughtException: true});
 
 var broker = new ServiceBroker({
-    logger: console,
     logLevel: 'error',
     heartbeatInterval: 10,
     heartbeatTimeout: 30,
@@ -20,8 +19,15 @@ var broker = new ServiceBroker({
             pingInterval: 15
         }
     },
+    retryPolicy: {
+        enabled: true,
+        retries: 3,
+        delay: 250,
+        maxDelay: 2000,
+        factor: 2,
+        check: err => err
+    },
     requestTimeout: 30 * 1000,
-    requestRetry: 2,
     transporter: {
         type: 'NATS',
         options: {
