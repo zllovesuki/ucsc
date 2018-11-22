@@ -5,6 +5,7 @@ var path = require('path');
 var fs = require('fs')
 var ServiceBroker = require('moleculer').ServiceBroker
 var ON_DEATH = require('death')({uncaughtException: true});
+const VigilReporter = require("vigil-reporter").VigilReporter
 
 var broker = new ServiceBroker({
     logLevel: 'error',
@@ -255,7 +256,19 @@ var checkForNewTerm = function() {
     })
 }
 
-broker.start().then(shouldStartFresh).then(function(weShould) {
+broker.start().then(function() {
+    var vigilReporter = new VigilReporter({
+        url: config.vigil_endpoint,
+        token: config.vigil_token,
+        probe_id: config.vigil_probe_id,
+        node_id: config.vigil_node_id,
+        replica_id: config.vigil_id,
+        interval: 30,
+        tuning: {
+            use_active_memory: true
+        }
+    });
+}).then(shouldStartFresh).then(function(weShould) {
     if (weShould) {
         // initialize everything
         console.log('No data found on Andromeda, fetching fresh data...')

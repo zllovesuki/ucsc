@@ -5,6 +5,7 @@ var path = require('path');
 var fs = require('fs')
 var pm2 = require('pm2')
 var ServiceBroker = require('moleculer').ServiceBroker
+const VigilReporter = require("vigil-reporter").VigilReporter
 
 var broker = new ServiceBroker({
     logLevel: 'error',
@@ -117,4 +118,16 @@ var startStatsWorker = function() {
     });
 }
 
-broker.start().then(downloadNewMappings).then(startStatsWorker)
+broker.start().then(function() {
+    var vigilReporter = new VigilReporter({
+        url: config.vigil_endpoint,
+        token: config.vigil_token,
+        probe_id: config.vigil_probe_id,
+        node_id: config.vigil_node_id,
+        replica_id: config.vigil_id,
+        interval: 30,
+        tuning: {
+            use_active_memory: true
+        }
+    });
+}).then(downloadNewMappings).then(startStatsWorker)
