@@ -261,9 +261,7 @@ var secureRequest = function(url, data, jar) {
         if (data) {
             obj.method = 'POST';
             obj.form = data;
-            obj.headers = {
-                'Referer': 'https://pisa.ucsc.edu/class_search/index.php'
-            };
+            obj.headers['Referer'] = 'https://pisa.ucsc.edu/class_search/index.php';
         }
         if (jar) {
             obj.jar = j;
@@ -300,9 +298,7 @@ var plainRequest = function(url, data) {
         if (data) {
             obj.method = 'POST';
             obj.form = data;
-            obj.headers = {
-                'Referer': 'https://pisa.ucsc.edu/class_search/index.php'
-            };
+            obj.headers['Referer'] = 'https://en5gsisi1zqsd.x.pipedream.net/';
         }
         if (process.env.SOCKS) {
             obj.agentClass = Agent;
@@ -366,9 +362,7 @@ var secureDirectoryRequest = function(data, jar) {
         if (data) {
             obj.method = 'POST';
             obj.form = data;
-            obj.headers = {
-                'Referer': 'https://campusdirectory.ucsc.edu/cd_advanced'
-            };
+            obj.headers['Referer'] = 'https://campusdirectory.ucsc.edu/cd_advanced';
         }
         if (jar) {
             obj.jar = j;
