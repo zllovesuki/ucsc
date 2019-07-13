@@ -298,7 +298,7 @@ var plainRequest = function(url, data) {
         if (data) {
             obj.method = 'POST';
             obj.form = data;
-            obj.headers['Referer'] = 'https://en5gsisi1zqsd.x.pipedream.net/';
+            obj.headers['Referer'] = 'https://pisa.ucsc.edu/class_search/index.php';
         }
         if (process.env.SOCKS) {
             obj.agentClass = Agent;
