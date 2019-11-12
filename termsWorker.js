@@ -232,7 +232,7 @@ var checkForNewTerm = function() {
             })
             .then(job.calculateTermsStats)
             .then(job.calculateGETermsStats)
-            .then(job.saveMajorsMinors)
+            //.then(job.saveMajorsMinors)
             .then(job.saveFinalSchedules)
             .then(function() {
                 return Promise.map(todoTerms, uploadOneTerm, { concurrency: 3 })
@@ -280,8 +280,8 @@ broker.start().then(function() {
         .then(job.calculateTermsStats)
         .then(job.saveGEDesc)
         .then(job.calculateGETermsStats)
-        .then(job.saveMaps)
-        .then(job.saveMajorsMinors)
+        //.then(job.saveMaps)
+        //.then(job.saveMajorsMinors)
         .then(job.saveFinalSchedules)
         .then(function() {
             var onDemandUpload = function() {
