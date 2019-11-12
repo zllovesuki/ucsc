@@ -458,7 +458,7 @@ var getCourseRawDom = function(termId, courseNumber) {
 }
 
 var getGEDescRawDom = function() {
-    return plainRequest('http://registrar.ucsc.edu/navigator/section3/gened/beginning2010/gen-ed-codes/index.html')
+    return secureRequest('https://catalog.ucsc.edu/Current/General-Catalog/Undergraduate-Information/Undergraduate-Academic-Program/General-Education-Requirements')
 }
 
 var searchOnRateMyProfessorRawDom = function(firstName, lastName) {
@@ -599,18 +599,31 @@ var parseGEDescDOMFromSelector = function(body) {
     var $ = cheerio.load(body);
     var geDesc = {};
 
-    var domRef;
     var split = [];
-    $('.contentBox').find('tr').each(function(i, elm) {
-        if (i === 0) return;
-        domRef = $(this).children().first();
-        if (domRef.next().text().trim().length === 0) return;
-        split = domRef.next().text().trim().split('and');
-        split.forEach(function(text) {
-            geDesc[text.trim()] = domRef.text().trim();
-        })
+    $($('table').get(0)).find('tr').each(function(i, elm) {
+        if (i < 2) return;
+
+        /* first <td>, which should be the description */
+        var descRef = $(this).children().first();
+        if (descRef.next().text().trim().length === 0) return;
+
+        /* next <td>, which should be the code */
+        var codeRef = descRef.next();
+
+        var codeChildren = $('strong', codeRef).children();
+        var descChildren = $('span', descRef);
+
+        if (codeChildren.length == 0) {
+            // single code in a row
+            geDesc[codeRef.text().trim()] = descRef.text().trim();
+        }else{
+            // more than one code in a row
+            codeChildren.each((j, el) => {
+                geDesc[el.next.data.trim()] = descChildren.get(j).next.data;
+            })
+        }
+
     })
-    // http://registrar.ucsc.edu/navigator/section3/gened/beginning2010/gen-ed-codes/{code}-code.html
     return geDesc;
 }
 
@@ -814,7 +827,7 @@ var parseDOMFromSelector = function(termId, body) {
     var courses = [], isSummer = false
     var obj = {}, timeObj = {}
     var $ = cheerio.load(body);
-    var headers = $('a', $('h2', $('.panel-default')))
+    var headers = $('.panel-default > .panel-heading')
     var body = $('.panel-default > .panel-body > .row')
     var numHeaders = headers.length
     var numBody = body.length
@@ -833,43 +846,57 @@ var parseDOMFromSelector = function(termId, body) {
     var location = '';
     var status = '';
     var classDataCompatibleTime = {};
-    var split = [], timeIndex
+    var split = [];
 
     for (var i = 0; i < numHeaders; i++) {
 
-        obj.c = headers[i].children[0].data;
-        if (typeof body[i].children[1].children[1].children[0] !== 'undefined') {
-            obj.num = parseInt(body[i].children[1].children[1].children[0].data);
+        var courseHeaderDom = $(headers[i]).children();
+        var courseBodyDom = $(body[i]).children();
+
+        /* Course name */
+        var courseName = $(courseHeaderDom).find('a');
+
+        if (courseName.length == 1) {
+            obj.c = courseName.text();
+        }
+
+        /* Course number */
+        var courseNumDom = courseBodyDom.get(0);
+        var courseNum = $(courseNumDom).find('a');
+
+        if (courseNum.length == 1) {
+            obj.num = parseInt(courseNum.text());
         }else{
             obj.num = null;
         }
 
-        // Real time enrollment status is not needed yet
-        /*
-        if (typeof body[i].children[9].children[0].data !== 'undefined') {
-            Object.assign(courses[i], {
-                status: body[i].children[9].children[0].data.replace(/^\s+/,"")
-            });
-        }
-        */
+        /* Parse location and time */
+        var courseLocTimeDom = $(courseBodyDom.get(2)).children();
 
-        parseLocation = body[i].children[5].children[2].data.replace(/^\s+/, "").split(':', 2);
+        /* parse location */
+        var courseLoc = $(courseLocTimeDom.get(0));
+        var locText = courseLoc.find('.sr-only').get(0).next.data;
+        parseLocation = locText.replace(/^\s+/, "").split(':', 2);
 
-        if (typeof body[i].children[7].children[2] !== 'undefined' && body[i].children[7].children[2].data.indexOf('Summer') !== -1) {
-            obj.l = summerCipher(body[i].children[7].children[2].data)
-            timeIndex = 9
+        /* check if summer session */
+        var courseSummerDom = $(courseBodyDom.get(3));
+        if (courseSummerDom.text().indexOf('Summer') !== -1) {
+            obj.l = summerCipher(courseSummerDom.text())
         }else{
             obj.l = null
-            timeIndex = 7
         }
 
-        if (body[i].children[timeIndex].children[2].data.replace(/^\s+/, "").indexOf('Cancel') !== -1) {
+        /*  parse time */
+        var courseTimeDom = $(courseLocTimeDom.get(1));
+        var courseTimeText = courseTimeDom.find('.sr-only').get(0).next.data;
+
+        if (courseTimeText.replace(/^\s+/, "").indexOf('Cancel') !== -1) {
             // Let's account for cancelled class
             classDataCompatibleTime = false;
-        }else if (body[i].children[timeIndex].children[2].data.replace(/^\s+/, "").substring(0, 3) === 'TBA') {
+        }else if (courseTimeText.replace(/^\s+/, "").substring(0, 3) === 'TBA') {
             classDataCompatibleTime = null;
         }else{
-            split = body[i].children[timeIndex].children[2].data.replace(/^\s+/, "").split(' ');
+            split = courseTimeText.replace(/^\s+/, "").split(' ');
             if (split[0].indexOf('M') !== -1) timeObj['MON'] = 'Y'
             if (split[0].indexOf('Tu') !== -1) timeObj['TUES'] = 'Y'
             if (split[0].indexOf('W') !== -1) timeObj['WED'] = 'Y'
@@ -886,10 +913,20 @@ var parseDOMFromSelector = function(termId, body) {
 
         timeObj = {}
 
+        var courseIntstructoreDom = $(courseBodyDom.get(1));
+        var instructorTextNodes = $(courseIntstructoreDom.not('i')).contents();
+
+        var instructors = [];
+        instructorTextNodes.each((i, elem) => {
+            if (elem.type == 'text') {
+                instructors.push(elem.data.replace(/^\s+/, ""))
+            }
+        })
+
         Object.assign(obj, {
             // RateMyProfessors: https://www.google.com/search?btnG=1&pws=0&q=site:ratemyprofessors.com%20Santa%20Cruz%20 + name
             ins: {
-                d: [ body[i].children[3].children[2].data.replace(/^\s+/, "") ]
+                d: instructors
             },
             //type: parseLocation[0],
             loct: [

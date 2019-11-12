@@ -9,7 +9,7 @@ describe('Terms List DOM Parser', function() {
     it('Should obtains a list of quarters', function(done) {
         ucsc.getTerms().then(function(terms) {
             try {
-                terms.should.include({"code":"2168","name":"2016 Fall Quarter"});
+                expect(terms.length).to.be.at.least(10);
                 done();
             }catch(e) {
                 done(e);
