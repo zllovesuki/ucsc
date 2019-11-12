@@ -1436,7 +1436,7 @@ var getTranscript = function(username, password) {
 }
 
 var getFinalRawDom = function() {
-    return plainRequest('http://registrar.ucsc.edu/soc/final-examinations.html')
+    return secureRequest('https://registrar.ucsc.edu/soc/final-examinations.html')
 }
 
 var quarterToNum = function(quarter) {
@@ -1465,11 +1465,11 @@ var nameToCode = function(quarter, year) {
 
 var parseFinalDOM = function(body) {
     var $ = cheerio.load(body);
-    var tables = $('.contentBox').find('table');
+    var tables = $('#content').find('table');
     var body = null, split = [], rows = [], Class, Start, ExamDate, ExamTimes, obj = {};
     var finals = {}
     for (var i = 0, length = tables.length; i < length; i++) {
-        body = $(tables[i]).children().first();
+        body = $('tbody', tables[i]);
         // Since someone obviously didn't do their jobs properly, I can't use the ID identifier
         if ($(body).children().first().text().trim().indexOf('Block') !== -1) continue;
         split = $(body).children().first().text().trim().split(' ');
@@ -1493,7 +1493,7 @@ var parseFinalDOM = function(body) {
             if (Class.indexOf('Th') !== -1) obj.days.push('Thursday')
             if (Class.indexOf('F') !== -1) obj.days.push('Friday')
             if (!Start) {
-                obj.hash = Class;
+                obj.hash = Class.replace(/\*/gi, '');;
             }else{
                 obj.hash = obj.days.join('-') + '-' + twelveTo24(Start.replace(/[^0-9a-zA-Z:]/g, '').toUpperCase());
             }
