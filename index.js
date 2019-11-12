@@ -873,45 +873,57 @@ var parseDOMFromSelector = function(termId, body) {
         /* Parse location and time */
         var courseLocTimeDom = $(courseBodyDom.get(2)).children();
 
-        /* parse location */
-        var courseLoc = $(courseLocTimeDom.get(0));
-        var locText = courseLoc.find('.sr-only').get(0).next.data;
-        parseLocation = locText.replace(/^\s+/, "").split(':', 2);
+        var locts = [];
 
-        /* check if summer session */
-        var courseSummerDom = $(courseBodyDom.get(3));
-        if (courseSummerDom.text().indexOf('Summer') !== -1) {
-            obj.l = summerCipher(courseSummerDom.text())
-        }else{
-            obj.l = null
+        // some classes have multiple meeting times
+        for (var locTimeIndex = 0; locTimeIndex < courseLocTimeDom.length; locTimeIndex += 2) {
+            /* parse location */
+            var courseLoc = $(courseLocTimeDom.get(locTimeIndex));
+            var locText = courseLoc.find('.sr-only').get(0).next.data;
+            parseLocation = locText.replace(/^\s+/, "").split(':', 2);
+
+            /* check if summer session */
+            var courseSummerDom = $(courseBodyDom.get(3));
+            if (courseSummerDom.text().indexOf('Summer') !== -1) {
+                obj.l = summerCipher(courseSummerDom.text())
+            }else{
+                obj.l = null
+            }
+
+            /*  parse time */
+            var courseTimeDom = $(courseLocTimeDom.get(locTimeIndex + 1));
+            var courseTimeText = courseTimeDom.find('.sr-only').get(0).next.data;
+
+            if (courseTimeText.replace(/^\s+/, "").indexOf('Cancel') !== -1) {
+                // Let's account for cancelled class
+                classDataCompatibleTime = false;
+            }else if (courseTimeText.replace(/^\s+/, "").substring(0, 3) === 'TBA') {
+                classDataCompatibleTime = null;
+            }else{
+                split = courseTimeText.replace(/^\s+/, "").split(' ');
+                if (split[0].indexOf('M') !== -1) timeObj['MON'] = 'Y'
+                if (split[0].indexOf('Tu') !== -1) timeObj['TUES'] = 'Y'
+                if (split[0].indexOf('W') !== -1) timeObj['WED'] = 'Y'
+                if (split[0].indexOf('Th') !== -1) timeObj['THURS'] = 'Y'
+                if (split[0].indexOf('F') !== -1) timeObj['FRI'] = 'Y'
+                if (split[0].indexOf('Sa') !== -1) timeObj['SAT'] = 'Y'
+                if (split[0].indexOf('Su') !== -1) timeObj['SUN'] = 'Y'
+                split = split[1].split('-');
+                timeObj.START_TIME = split[0];
+                timeObj.END_TIME = split[1];
+                classDataCompatibleTime = parseTime(timeObj);
+                split = [];
+            }
+
+            locts.push({
+                loc: parseLocation[1].replace(/^\s+/, "") === 'TBA' ? null : parseLocation[1].replace(/^\s+/, ""),
+                t: classDataCompatibleTime
+            })
+
+            timeObj = {}
+
+            classDataCompatibleTime = {};
         }
-
-        /*  parse time */
-        var courseTimeDom = $(courseLocTimeDom.get(1));
-        var courseTimeText = courseTimeDom.find('.sr-only').get(0).next.data;
-
-        if (courseTimeText.replace(/^\s+/, "").indexOf('Cancel') !== -1) {
-            // Let's account for cancelled class
-            classDataCompatibleTime = false;
-        }else if (courseTimeText.replace(/^\s+/, "").substring(0, 3) === 'TBA') {
-            classDataCompatibleTime = null;
-        }else{
-            split = courseTimeText.replace(/^\s+/, "").split(' ');
-            if (split[0].indexOf('M') !== -1) timeObj['MON'] = 'Y'
-            if (split[0].indexOf('Tu') !== -1) timeObj['TUES'] = 'Y'
-            if (split[0].indexOf('W') !== -1) timeObj['WED'] = 'Y'
-            if (split[0].indexOf('Th') !== -1) timeObj['THURS'] = 'Y'
-            if (split[0].indexOf('F') !== -1) timeObj['FRI'] = 'Y'
-            if (split[0].indexOf('Sa') !== -1) timeObj['SAT'] = 'Y'
-            if (split[0].indexOf('Su') !== -1) timeObj['SUN'] = 'Y'
-            split = split[1].split('-');
-            timeObj.START_TIME = split[0];
-            timeObj.END_TIME = split[1];
-            classDataCompatibleTime = parseTime(timeObj);
-            split = [];
-        }
-
-        timeObj = {}
 
         var courseIntstructoreDom = $(courseBodyDom.get(1));
         var instructorTextNodes = $(courseIntstructoreDom.not('i')).contents();
@@ -929,16 +941,9 @@ var parseDOMFromSelector = function(termId, body) {
                 d: instructors
             },
             //type: parseLocation[0],
-            loct: [
-                {
-                    loc: parseLocation[1].replace(/^\s+/, "") === 'TBA' ? null : parseLocation[1].replace(/^\s+/, ""),
-                    t: classDataCompatibleTime
-                }
-            ],
+            loct: locts,
             cap: null
         });
-
-        classDataCompatibleTime = {};
 
         courses.push(obj)
         obj = {}
