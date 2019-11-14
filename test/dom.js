@@ -14,7 +14,7 @@ describe('Terms List DOM Parser', function() {
             }catch(e) {
                 done(e);
             }
-        })
+        }).catch(done)
     })
 })
 
@@ -27,7 +27,7 @@ describe('Courses List DOM Parser', function() {
             }catch(e) {
                 done(e);
             }
-        })
+        }).catch(done)
     })
 })
 
@@ -47,7 +47,7 @@ describe('Course Information DOM Parser', function() {
             }catch(e) {
                 done(e);
             }
-        })
+        }).catch(done)
     })
 })
 
@@ -60,7 +60,7 @@ describe('GE Description DOM Parser', function() {
             }catch(e) {
                 done(e);
             }
-        })
+        }).catch(done)
     })
 })
 
@@ -74,7 +74,7 @@ describe('Map Coordinates DOM Parser', function() {
             }catch(e) {
                 done(e);
             }
-        })
+        }).catch(done)
     })
 })
 
@@ -82,20 +82,20 @@ describe('RateMyProfessors Stats DOM Parser', function() {
     it('Should obtains Yonatan Katznelson\'s RMP stats', function(done) {
         ucsc.getObjByFullName('Yonatan', 'Katznelson').then(function(list) {
             expect(list.length).to.be.above(0);
-            return ucsc.getRateMyProfessorScoresByTid(list[0].tid).then(function(rmp) {
+            return ucsc.getRateMyProfessorScoresByTid(list[1].tid).then(function(rmp) {
                 try {
                     // Sorry professor, but you are very spicy
                     expect(rmp).to.have.property('scores');
                     expect(rmp.scores).to.have.property('overall');
-                    expect(rmp.scores.overall).to.be.below(3);
+                    expect(parseFloat(rmp.scores.overall)).to.be.below(3);
                     expect(rmp.scores).to.have.property('count');
-                    expect(rmp.scores.count).to.be.above(300);
+                    expect(parseInt(rmp.scores.count)).to.be.above(300);
                     done();
                 }catch(e) {
                     done(e);
                 }
             })
-        })
+        }).catch(done)
     })
 })
 
@@ -111,6 +111,6 @@ describe('Major/Minors PDF Parser', function() {
             }catch(e) {
                 done(e);
             }
-        })
+        }).catch(done)
     })
 })
