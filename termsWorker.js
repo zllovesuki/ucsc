@@ -8,7 +8,11 @@ var ON_DEATH = require('death')({uncaughtException: true});
 const VigilReporter = require("vigil-reporter").VigilReporter
 
 var broker = new ServiceBroker({
-    logLevel: 'error',
+    namespace: "production-0.14.x",
+    logger: {
+        type: "Console",
+        level: "error"
+    },
     heartbeatInterval: 10,
     heartbeatTimeout: 30,
     registry: {
@@ -41,7 +45,7 @@ var broker = new ServiceBroker({
             yieldTime: 20
         }
     },
-    validation: true
+    validator: true
 })
 
 var db = __dirname + '/db',
