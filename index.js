@@ -938,8 +938,7 @@ var parseDOMFromSelector = function(termId, body) {
                 classDataCompatibleTime = null;
             }else{
                 split = courseTimeText.replace(/^\s+/, "").split(' ');
-                if (split.length === 2) {
-                    console.log(split)
+                if (split.length > 1) {
                     if (split[0].indexOf('M') !== -1) timeObj['MON'] = 'Y'
                     if (split[0].indexOf('Tu') !== -1) timeObj['TUES'] = 'Y'
                     if (split[0].indexOf('W') !== -1) timeObj['WED'] = 'Y'
