@@ -938,17 +938,22 @@ var parseDOMFromSelector = function(termId, body) {
                 classDataCompatibleTime = null;
             }else{
                 split = courseTimeText.replace(/^\s+/, "").split(' ');
-                if (split[0].indexOf('M') !== -1) timeObj['MON'] = 'Y'
-                if (split[0].indexOf('Tu') !== -1) timeObj['TUES'] = 'Y'
-                if (split[0].indexOf('W') !== -1) timeObj['WED'] = 'Y'
-                if (split[0].indexOf('Th') !== -1) timeObj['THURS'] = 'Y'
-                if (split[0].indexOf('F') !== -1) timeObj['FRI'] = 'Y'
-                if (split[0].indexOf('Sa') !== -1) timeObj['SAT'] = 'Y'
-                if (split[0].indexOf('Su') !== -1) timeObj['SUN'] = 'Y'
-                split = split[1].split('-');
-                timeObj.START_TIME = split[0];
-                timeObj.END_TIME = split[1];
-                classDataCompatibleTime = parseTime(timeObj);
+                if (split.length === 2) {
+                    console.log(split)
+                    if (split[0].indexOf('M') !== -1) timeObj['MON'] = 'Y'
+                    if (split[0].indexOf('Tu') !== -1) timeObj['TUES'] = 'Y'
+                    if (split[0].indexOf('W') !== -1) timeObj['WED'] = 'Y'
+                    if (split[0].indexOf('Th') !== -1) timeObj['THURS'] = 'Y'
+                    if (split[0].indexOf('F') !== -1) timeObj['FRI'] = 'Y'
+                    if (split[0].indexOf('Sa') !== -1) timeObj['SAT'] = 'Y'
+                    if (split[0].indexOf('Su') !== -1) timeObj['SUN'] = 'Y'
+                    split = split[1].split('-');
+                    timeObj.START_TIME = split[0];
+                    timeObj.END_TIME = split[1];
+                    classDataCompatibleTime = parseTime(timeObj);
+                }else{
+                    classDataCompatibleTime = null;
+                }
                 split = [];
             }
 
